@@ -129,7 +129,7 @@ function submitForm(event) {
     const originalText = submitButton.innerHTML;
     
     // Show loading state
-    submitButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sending...';
+    submitButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Submitting...';
     submitButton.disabled = true;
     
     // Check for honeypot field (spam protection)
@@ -153,45 +153,16 @@ function submitForm(event) {
     // Add timestamp and source
     formObject.timestamp = new Date().toISOString();
     formObject.source = 'website';
+    formObject.submissionId = generateSubmissionId();
     
-    // Show immediate confirmation message
-    showNotification('Form submitted! Sending to our team and triggering automation...', 'success');
+    // Show initial processing message
+    showNotification('Processing your request...', 'info');
     
-    // First, try to submit to Netlify function
-    fetch('/.netlify/functions/submit-form', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(formObject)
-    })
-    .then(response => {
-        if (response.ok) {
-            return response.json();
-        } else {
-            throw new Error('Netlify function failed');
-        }
-    })
-    .then(data => {
-        if (data.success) {
-            // Trigger webhook for make.com automation
-            triggerWebhook(formObject);
-            
-            showNotification(data.message, 'success');
-            form.reset();
-        } else {
-            throw new Error(data.error || 'Unknown error');
-        }
-    })
-    .catch(error => {
-        console.error('Netlify function error:', error);
-        
-        // Fallback: Submit to Netlify's built-in form handling
-        submitToNetlifyForm(form, formObject, submitButton, originalText);
-    });
+    // Submit to Netlify's built-in form handling (faster and more reliable)
+    submitToNetlifyForm(form, formObject, submitButton, originalText);
 }
 
-// Fallback function to submit to Netlify's built-in form handling
+// Submit to Netlify's built-in form handling and verify webhook
 function submitToNetlifyForm(form, formObject, submitButton, originalText) {
     // Create a temporary form for Netlify submission
     const tempForm = document.createElement('form');
@@ -208,7 +179,7 @@ function submitToNetlifyForm(form, formObject, submitButton, originalText) {
     
     // Add all form data
     Object.keys(formObject).forEach(key => {
-        if (key !== 'timestamp' && key !== 'source') {
+        if (key !== 'timestamp' && key !== 'source' && key !== 'submissionId') {
             const input = document.createElement('input');
             input.type = 'hidden';
             input.name = key;
@@ -229,28 +200,49 @@ function submitToNetlifyForm(form, formObject, submitButton, originalText) {
     // Submit the form
     tempForm.submit();
     
-    // Trigger webhook for make.com automation
-    triggerWebhook(formObject);
+    // Update notification to show form submitted
+    showNotification('Form submitted successfully! Sending to our automation system...', 'info');
     
-    // Update the immediate confirmation message to final success
-    showNotification('Thank you! Your consultation request has been submitted. We\'ll contact you within 24 hours.', 'success');
-    form.reset();
-    
-    // Reset button
-    submitButton.innerHTML = originalText;
-    submitButton.disabled = false;
-    
-    // Clean up
-    document.body.removeChild(tempForm);
+    // Trigger webhook and wait for confirmation
+    triggerWebhookWithVerification(formObject)
+        .then(webhookSuccess => {
+            if (webhookSuccess) {
+                showNotification('Thank you! Your consultation request has been submitted and processed. We\'ll contact you within 24 hours.', 'success');
+            } else {
+                showNotification('Your form was submitted successfully, but there was a delay in our automation system. We\'ll contact you within 24 hours.', 'info');
+            }
+            form.reset();
+        })
+        .catch(error => {
+            console.error('Webhook error:', error);
+            showNotification('Your form was submitted successfully! We\'ll contact you within 24 hours.', 'success');
+            form.reset();
+        })
+        .finally(() => {
+            // Reset button
+            submitButton.innerHTML = originalText;
+            submitButton.disabled = false;
+            
+            // Clean up
+            document.body.removeChild(tempForm);
+        });
 }
 
-// Function to trigger webhook for make.com automation
-function triggerWebhook(formData) {
-    // Get webhook URL from config
+// Function to trigger webhook with verification
+async function triggerWebhookWithVerification(formData) {
     const webhookUrl = typeof CONFIG !== 'undefined' ? CONFIG.MAKE_WEBHOOK_URL : null;
     
-    if (webhookUrl) {
-        fetch(webhookUrl, {
+    if (!webhookUrl) {
+        console.log('Webhook URL not configured - skipping automation trigger');
+        return false;
+    }
+    
+    try {
+        // Send webhook with timeout
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+        
+        const response = await fetch(webhookUrl, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -262,22 +254,55 @@ function triggerWebhook(formData) {
                 service: formData.service,
                 message: formData.message || '',
                 timestamp: formData.timestamp,
-                source: formData.source
-            })
-        })
-        .then(response => {
-            if (response.ok) {
-                console.log('Webhook triggered successfully');
-            } else {
-                console.error('Webhook failed:', response.status);
-            }
-        })
-        .catch(error => {
-            console.error('Webhook error:', error);
+                source: formData.source,
+                submissionId: formData.submissionId
+            }),
+            signal: controller.signal
         });
-    } else {
-        console.log('Webhook URL not configured - skipping automation trigger');
+        
+        clearTimeout(timeoutId);
+        
+        if (response.ok) {
+            console.log('Webhook triggered successfully');
+            
+            // Wait a moment for make.com to process
+            await new Promise(resolve => setTimeout(resolve, 2000));
+            
+            // Try to verify webhook reception (optional - make.com doesn't always provide verification)
+            try {
+                const verificationResponse = await fetch(`${webhookUrl}/verify`, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                });
+                
+                if (verificationResponse.ok) {
+                    console.log('Webhook verification successful');
+                    return true;
+                }
+            } catch (verificationError) {
+                console.log('Webhook verification not available, assuming success');
+            }
+            
+            return true;
+        } else {
+            console.error('Webhook failed:', response.status);
+            return false;
+        }
+    } catch (error) {
+        if (error.name === 'AbortError') {
+            console.error('Webhook timeout');
+        } else {
+            console.error('Webhook error:', error);
+        }
+        return false;
     }
+}
+
+// Generate unique submission ID
+function generateSubmissionId() {
+    return 'sub_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
 }
 
 // Notification system

@@ -294,9 +294,14 @@
             .then(data => {
                 log('Netlify function response: ' + JSON.stringify(data, null, 2), 'success');
                 
-                // Now test webhook
-                log('Testing webhook...', 'info');
-                return testWebhook(formObject);
+                // Check if webhook was successful in the function
+                if (data.webhookSuccess) {
+                    log('Webhook was triggered successfully by Netlify function', 'success');
+                } else {
+                    log('Webhook failed in Netlify function, testing directly...', 'info');
+                    return testWebhookWithTimeout(formObject);
+                }
+                return data.webhookSuccess;
             })
             .then(webhookResult => {
                 resultDiv.innerHTML = `
@@ -305,6 +310,7 @@
                         <p><strong>Form Submission:</strong> ✅ Success</p>
                         <p><strong>Webhook:</strong> ${webhookResult ? '✅ Success' : '❌ Failed'}</p>
                         <p><strong>Test ID:</strong> ${formObject.testId}</p>
+                        <p><strong>Submission ID:</strong> ${formObject.submissionId}</p>
                         <p>Check the logs below for detailed information.</p>
                     </div>
                 `;
@@ -315,13 +321,14 @@
                 
                 // Fallback: test webhook directly
                 log('Testing webhook as fallback...', 'info');
-                testWebhook(formObject).then(webhookResult => {
+                testWebhookWithTimeout(formObject).then(webhookResult => {
                     resultDiv.innerHTML = `
                         <div class="result ${webhookResult ? 'success' : 'error'}">
                             <h4>${webhookResult ? '⚠️' : '❌'} Test Results</h4>
                             <p><strong>Form Submission:</strong> ❌ Failed (Netlify function unavailable)</p>
                             <p><strong>Webhook:</strong> ${webhookResult ? '✅ Success' : '❌ Failed'}</p>
                             <p><strong>Test ID:</strong> ${formObject.testId}</p>
+                            <p><strong>Submission ID:</strong> ${formObject.submissionId}</p>
                             <p>Check the logs below for detailed information.</p>
                         </div>
                     `;
@@ -340,23 +347,85 @@
                 message: 'This is a direct webhook test',
                 timestamp: new Date().toISOString(),
                 source: 'direct-webhook-test',
-                testId: `direct-test-${testCounter}`
+                testId: `direct-test-${testCounter}`,
+                submissionId: `test-${testCounter}`
             };
             
             log(`Starting direct webhook test #${testCounter}`, 'info');
             log('Test data: ' + JSON.stringify(testData, null, 2), 'info');
             
-            testWebhook(testData).then(success => {
+            testWebhookWithTimeout(testData).then(success => {
                 const resultDiv = document.getElementById('result');
                 resultDiv.innerHTML = `
                     <div class="result ${success ? 'success' : 'error'}">
-                        <h4>${success ? '✅' : '❌'} Direct Webhook Test</h4>
-                        <p><strong>Result:</strong> ${success ? 'Success' : 'Failed'}</p>
+                        <h4>${success ? '✅' : '❌'} Direct Webhook Test Result</h4>
+                        <p><strong>Status:</strong> ${success ? 'Success' : 'Failed'}</p>
                         <p><strong>Test ID:</strong> ${testData.testId}</p>
                         <p>Check the logs below for detailed information.</p>
                     </div>
                 `;
             });
+        }
+        
+        // Test webhook with timeout and better error handling
+        async function testWebhookWithTimeout(testData) {
+            const webhookUrl = typeof CONFIG !== 'undefined' ? CONFIG.MAKE_WEBHOOK_URL : null;
+            
+            if (!webhookUrl) {
+                log('Webhook URL not configured', 'error');
+                return false;
+            }
+            
+            try {
+                log('Sending webhook request...', 'info');
+                
+                // Create AbortController for timeout
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+                
+                const startTime = Date.now();
+                const response = await fetch(webhookUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(testData),
+                    signal: controller.signal
+                });
+                
+                clearTimeout(timeoutId);
+                const endTime = Date.now();
+                const duration = endTime - startTime;
+                
+                log(`Webhook response received in ${duration}ms`, 'info');
+                log(`Response status: ${response.status}`, 'info');
+                
+                if (response.ok) {
+                    log('Webhook request successful', 'success');
+                    
+                    // Try to get response body for additional info
+                    try {
+                        const responseText = await response.text();
+                        if (responseText) {
+                            log('Response body: ' + responseText, 'info');
+                        }
+                    } catch (e) {
+                        log('No response body available', 'info');
+                    }
+                    
+                    return true;
+                } else {
+                    log(`Webhook failed with status: ${response.status}`, 'error');
+                    return false;
+                }
+            } catch (error) {
+                if (error.name === 'AbortError') {
+                    log('Webhook request timed out after 10 seconds', 'error');
+                } else {
+                    log('Webhook error: ' + error.message, 'error');
+                }
+                return false;
+            }
         }
         
         // Test webhook function
