@@ -5,6 +5,9 @@ const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017';
 const DB_NAME = 'lumina-smiles';
 const COLLECTION_NAME = 'leads';
 
+// Webhook configuration
+const MAKE_WEBHOOK_URL = process.env.MAKE_WEBHOOK_URL || 'https://hook.us2.make.com/2wabyrnjjipw4m2c5gg7lclqi7bx2n5d';
+
 exports.handler = async (event, context) => {
   // Enable CORS
   const headers = {
@@ -81,6 +84,15 @@ exports.handler = async (event, context) => {
       service: lead.service
     });
 
+    // Trigger webhook for automation
+    try {
+      await triggerWebhook(lead);
+      console.log('Webhook triggered successfully');
+    } catch (webhookError) {
+      console.error('Webhook error:', webhookError);
+      // Don't fail the form submission if webhook fails
+    }
+
     // Return success response
     return {
       statusCode: 200,
@@ -95,6 +107,14 @@ exports.handler = async (event, context) => {
   } catch (error) {
     console.error('Error submitting form:', error);
 
+    // If MongoDB is not available, still try to trigger webhook
+    try {
+      await triggerWebhook(lead);
+      console.log('Webhook triggered successfully (fallback)');
+    } catch (webhookError) {
+      console.error('Webhook error (fallback):', webhookError);
+    }
+
     // If MongoDB is not available, fall back to storing in a simple file or just return success
     // This ensures the form still works even without database setup
     return {
@@ -108,3 +128,39 @@ exports.handler = async (event, context) => {
     };
   }
 };
+
+// Function to trigger webhook for make.com automation
+async function triggerWebhook(formData) {
+  if (!MAKE_WEBHOOK_URL) {
+    console.log('Webhook URL not configured - skipping automation trigger');
+    return;
+  }
+
+  try {
+    const response = await fetch(MAKE_WEBHOOK_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        name: formData.name,
+        email: formData.email,
+        phone: formData.phone,
+        service: formData.service,
+        message: formData.message || '',
+        timestamp: formData.submittedAt,
+        source: formData.source,
+        leadId: formData._id || 'unknown'
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error(`Webhook failed with status: ${response.status}`);
+    }
+
+    console.log('Webhook triggered successfully');
+  } catch (error) {
+    console.error('Webhook error:', error);
+    throw error;
+  }
+}
