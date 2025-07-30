@@ -333,7 +333,7 @@
                 </div>
                 <div class="contact-form">
                     <h3>Book Your Free Consultation</h3>
-                    <form id="leadForm" name="contact" method="POST" data-netlify="true" netlify-honeypot="bot-field" onsubmit="submitForm(event)">
+                    <form id="leadForm" name="contact" method="POST" action="/" netlify netlify-honeypot="bot-field">
                         <input type="hidden" name="form-name" value="contact" />
                         <p class="hidden">
                             <label>Don't fill this out if you're human: <input name="bot-field" /></label>
@@ -365,6 +365,23 @@
                             Book Free Consultation
                             <i class="fas fa-arrow-right"></i>
                         </button>
+                    </form>
+                    
+                    <!-- Static form for Netlify detection (hidden) -->
+                    <form name="contact" netlify netlify-honeypot="bot-field" style="display: none;">
+                        <input type="text" name="name" />
+                        <input type="email" name="email" />
+                        <input type="tel" name="phone" />
+                        <select name="service">
+                            <option value="teeth-whitening">Teeth Whitening</option>
+                            <option value="porcelain-veneers">Porcelain Veneers</option>
+                            <option value="invisalign">Invisalign</option>
+                            <option value="smile-makeover">Smile Makeover</option>
+                            <option value="botox">Botox & Facial Aesthetics</option>
+                            <option value="consultation">General Consultation</option>
+                        </select>
+                        <textarea name="message"></textarea>
+                        <input name="bot-field" />
                     </form>
                 </div>
             </div>
