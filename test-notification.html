@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Notification Test</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <div style="padding: 50px; text-align: center;">
+        <h1>Notification System Test</h1>
+        <p>Click the buttons below to test the notification system:</p>
+        
+        <button onclick="testNotification('success')" style="margin: 10px; padding: 10px 20px; background: #4CAF50; color: white; border: none; border-radius: 5px; cursor: pointer;">
+            Test Success Notification
+        </button>
+        
+        <button onclick="testNotification('error')" style="margin: 10px; padding: 10px 20px; background: #f44336; color: white; border: none; border-radius: 5px; cursor: pointer;">
+            Test Error Notification
+        </button>
+        
+        <button onclick="testNotification('info')" style="margin: 10px; padding: 10px 20px; background: #2196F3; color: white; border: none; border-radius: 5px; cursor: pointer;">
+            Test Info Notification
+        </button>
+        
+        <button onclick="testFormSubmission()" style="margin: 10px; padding: 10px 20px; background: #FF9800; color: white; border: none; border-radius: 5px; cursor: pointer;">
+            Test Form Submission Message
+        </button>
+    </div>
+
+    <script src="script.js"></script>
+    <script>
+        function testNotification(type) {
+            let message = '';
+            switch(type) {
+                case 'success':
+                    message = 'This is a success notification!';
+                    break;
+                case 'error':
+                    message = 'This is an error notification!';
+                    break;
+                case 'info':
+                    message = 'This is an info notification!';
+                    break;
+            }
+            showNotification(message, type);
+        }
+        
+        function testFormSubmission() {
+            showNotification('Form submitted! Sending to our team and triggering automation...', 'success');
+        }
+    </script>
+</body>
+</html>
