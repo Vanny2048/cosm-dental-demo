@@ -4,7 +4,8 @@
   "description": "Netlify functions for Lumina Smiles website",
   "main": "index.js",
   "dependencies": {
-    "mongodb": "^5.7.0"
+    "mongodb": "^5.7.0",
+    "node-fetch": "^2.6.7"
   },
   "devDependencies": {},
   "scripts": {
