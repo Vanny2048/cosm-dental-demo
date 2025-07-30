@@ -162,64 +162,74 @@ function submitForm(event) {
     submitToNetlifyForm(form, formObject, submitButton, originalText);
 }
 
-// Submit to Netlify's built-in form handling and verify webhook
-function submitToNetlifyForm(form, formObject, submitButton, originalText) {
-    // Create a temporary form for Netlify submission
-    const tempForm = document.createElement('form');
-    tempForm.method = 'POST';
-    tempForm.action = '/';
-    tempForm.style.display = 'none';
-    
-    // Add form name
-    const formNameInput = document.createElement('input');
-    formNameInput.type = 'hidden';
-    formNameInput.name = 'form-name';
-    formNameInput.value = 'contact';
-    tempForm.appendChild(formNameInput);
-    
-    // Add all form data
-    Object.keys(formObject).forEach(key => {
-        if (key !== 'timestamp' && key !== 'source' && key !== 'submissionId') {
-            const input = document.createElement('input');
-            input.type = 'hidden';
-            input.name = key;
-            input.value = formObject[key];
-            tempForm.appendChild(input);
-        }
-    });
-    
-    // Add honeypot field
-    const honeypotInput = document.createElement('input');
-    honeypotInput.type = 'hidden';
-    honeypotInput.name = 'bot-field';
-    honeypotInput.value = '';
-    tempForm.appendChild(honeypotInput);
-    
-    document.body.appendChild(tempForm);
-    
-    // Submit the form
-    tempForm.submit();
-    
-    // Update notification to show form submitted
-    showNotification('Form submitted successfully! Sending to our automation system...', 'info');
-    
-    // Trigger webhook and wait for confirmation
-    triggerWebhookWithVerification(formObject)
-        .then(webhookSuccess => {
-            if (webhookSuccess) {
-                showNotification('Thank you! Your consultation request has been submitted and processed. We\'ll contact you within 24 hours.', 'success');
-            } else {
-                showNotification('Your form was submitted successfully, but there was a delay in our automation system. We\'ll contact you within 24 hours.', 'info');
+// Submit to both Netlify and Make.com webhook
+async function submitToNetlifyForm(form, formObject, submitButton, originalText) {
+    try {
+        // Update notification to show processing
+        showNotification('Processing your request...', 'info');
+        
+        // 1. Send to Make.com webhook first (for immediate automation)
+        const webhookUrl = typeof CONFIG !== 'undefined' ? CONFIG.MAKE_WEBHOOK_URL : null;
+        let webhookSuccess = false;
+        
+        if (webhookUrl) {
+            try {
+                console.log('Sending to Make.com webhook:', webhookUrl);
+                const webhookResponse = await fetch(webhookUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(formObject)
+                });
+                
+                webhookSuccess = webhookResponse.ok;
+                console.log('Webhook response:', webhookResponse.status, webhookSuccess ? 'SUCCESS' : 'FAILED');
+                
+                if (webhookSuccess) {
+                    showNotification('Automation triggered! Processing your request...', 'info');
+                }
+            } catch (webhookError) {
+                console.error('Webhook error:', webhookError);
             }
-            form.reset();
-        })
-        .catch(error => {
-            console.error('Webhook error:', error);
+        }
+        
+        // 2. Send to Netlify for form logging (using fetch instead of form.submit())
+        const netlifyData = new FormData();
+        netlifyData.append('form-name', 'contact');
+        netlifyData.append('bot-field', '');
+        
+        // Add all form data to Netlify
+        Object.keys(formObject).forEach(key => {
+            if (key !== 'timestamp' && key !== 'source' && key !== 'submissionId') {
+                netlifyData.append(key, formObject[key]);
+            }
+        });
+        
+        console.log('Sending to Netlify for logging...');
+        const netlifyResponse = await fetch('/', {
+            method: 'POST',
+            body: netlifyData
+        });
+        
+        console.log('Netlify response:', netlifyResponse.status);
+        
+        // 3. Show success message
+        if (webhookSuccess) {
+            showNotification('Thank you! Your consultation request has been submitted and processed. We\'ll contact you within 24 hours.', 'success');
+        } else {
             showNotification('Your form was submitted successfully! We\'ll contact you within 24 hours.', 'success');
-            form.reset();
-        })
-        .finally(() => {
-            // Reset button
+        }
+        
+        // Reset form
+        form.reset();
+        
+    } catch (error) {
+        console.error('Form submission error:', error);
+        showNotification('Your form was submitted successfully! We\'ll contact you within 24 hours.', 'success');
+        form.reset();
+    } finally {
+        // Reset button
             submitButton.innerHTML = originalText;
             submitButton.disabled = false;
             
