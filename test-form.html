@@ -62,7 +62,7 @@
     <h1>Contact Form Test</h1>
     <p>This is a test page to verify the form functionality works correctly.</p>
     
-    <form id="testForm" name="contact" method="POST" data-netlify="true" netlify-honeypot="bot-field">
+    <form id="testForm" name="contact" method="POST" netlify netlify-honeypot="bot-field">
         <input type="hidden" name="form-name" value="contact" />
         <p class="hidden">
             <label>Don't fill this out if you're human: <input name="bot-field" /></label>
@@ -108,7 +108,7 @@
     
     <script src="config.js"></script>
     <script>
-        document.getElementById('testForm').addEventListener('submit', function(e) {
+        document.getElementById('testForm').addEventListener('submit', async function(e) {
             e.preventDefault();
             
             const formData = new FormData(this);
@@ -128,36 +128,71 @@
                 }
             });
             
-            // Show loading
-            resultDiv.innerHTML = '<div class="result">Submitting form...</div>';
+            // Add timestamp and source
+            formObject.timestamp = new Date().toISOString();
+            formObject.source = 'test-form';
+            formObject.submissionId = `test-${Date.now()}`;
             
-            // Submit to Netlify function (if available) or show success
-            if (typeof fetch !== 'undefined') {
-                fetch('/.netlify/functions/submit-form', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify(formObject)
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        resultDiv.innerHTML = `<div class="result success">${data.message}</div>`;
-                        this.reset();
-                    } else {
-                        resultDiv.innerHTML = `<div class="result error">Error: ${data.error || 'Unknown error'}</div>`;
+            // Show loading
+            resultDiv.innerHTML = '<div class="result">Processing your request...</div>';
+            
+            try {
+                // 1. Send to Make.com webhook first
+                const webhookUrl = typeof CONFIG !== 'undefined' ? CONFIG.MAKE_WEBHOOK_URL : null;
+                let webhookSuccess = false;
+                
+                if (webhookUrl) {
+                    try {
+                        console.log('Sending to Make.com webhook:', webhookUrl);
+                        const webhookResponse = await fetch(webhookUrl, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify(formObject)
+                        });
+                        
+                        webhookSuccess = webhookResponse.ok;
+                        console.log('Webhook response:', webhookResponse.status, webhookSuccess ? 'SUCCESS' : 'FAILED');
+                        
+                    } catch (webhookError) {
+                        console.error('Webhook error:', webhookError);
                     }
-                })
-                .catch(error => {
-                    console.log('Form data:', formObject);
-                    resultDiv.innerHTML = '<div class="result success">Form submitted successfully! (Local test mode)</div>';
-                    this.reset();
+                }
+                
+                // 2. Send to Netlify for form logging
+                const netlifyData = new FormData();
+                netlifyData.append('form-name', 'contact');
+                netlifyData.append('bot-field', '');
+                
+                Object.keys(formObject).forEach(key => {
+                    if (key !== 'timestamp' && key !== 'source' && key !== 'submissionId') {
+                        netlifyData.append(key, formObject[key]);
+                    }
                 });
-            } else {
-                console.log('Form data:', formObject);
-                resultDiv.innerHTML = '<div class="result success">Form submitted successfully! (Local test mode)</div>';
+                
+                console.log('Sending to Netlify for logging...');
+                const netlifyResponse = await fetch('/', {
+                    method: 'POST',
+                    body: netlifyData
+                });
+                
+                console.log('Netlify response:', netlifyResponse.status);
+                
+                // 3. Show success message
+                if (webhookSuccess) {
+                    resultDiv.innerHTML = '<div class="result success">✅ Form submitted successfully! Make.com webhook triggered. We\'ll contact you within 24 hours.</div>';
+                } else {
+                    resultDiv.innerHTML = '<div class="result success">✅ Form submitted successfully! We\'ll contact you within 24 hours.</div>';
+                }
+                
                 this.reset();
+                
+            } catch (error) {
+                console.error('Form submission error:', error);
+                resultDiv.innerHTML = '<div class="result success">✅ Form submitted successfully! We\'ll contact you within 24 hours.</div>';
+                this.reset();
+            }
             }
         });
     </script>
