@@ -150,7 +150,11 @@ function submitForm(event) {
         }
     });
     
-    // Submit to Netlify function
+    // Add timestamp and source
+    formObject.timestamp = new Date().toISOString();
+    formObject.source = 'website';
+    
+    // First, try to submit to Netlify function
     fetch('/.netlify/functions/submit-form', {
         method: 'POST',
         headers: {
@@ -158,24 +162,119 @@ function submitForm(event) {
         },
         body: JSON.stringify(formObject)
     })
-    .then(response => response.json())
+    .then(response => {
+        if (response.ok) {
+            return response.json();
+        } else {
+            throw new Error('Netlify function failed');
+        }
+    })
     .then(data => {
         if (data.success) {
+            // Trigger webhook for make.com automation
+            triggerWebhook(formObject);
+            
             showNotification(data.message, 'success');
             form.reset();
         } else {
-            showNotification('There was an error submitting your form. Please try again.', 'error');
+            throw new Error(data.error || 'Unknown error');
         }
     })
     .catch(error => {
-        console.error('Error:', error);
-        showNotification('There was an error submitting your form. Please try again.', 'error');
-    })
-    .finally(() => {
-        // Reset button
-        submitButton.innerHTML = originalText;
-        submitButton.disabled = false;
+        console.error('Netlify function error:', error);
+        
+        // Fallback: Submit to Netlify's built-in form handling
+        submitToNetlifyForm(form, formObject, submitButton, originalText);
     });
+}
+
+// Fallback function to submit to Netlify's built-in form handling
+function submitToNetlifyForm(form, formObject, submitButton, originalText) {
+    // Create a temporary form for Netlify submission
+    const tempForm = document.createElement('form');
+    tempForm.method = 'POST';
+    tempForm.action = '/';
+    tempForm.style.display = 'none';
+    
+    // Add form name
+    const formNameInput = document.createElement('input');
+    formNameInput.type = 'hidden';
+    formNameInput.name = 'form-name';
+    formNameInput.value = 'contact';
+    tempForm.appendChild(formNameInput);
+    
+    // Add all form data
+    Object.keys(formObject).forEach(key => {
+        if (key !== 'timestamp' && key !== 'source') {
+            const input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = key;
+            input.value = formObject[key];
+            tempForm.appendChild(input);
+        }
+    });
+    
+    // Add honeypot field
+    const honeypotInput = document.createElement('input');
+    honeypotInput.type = 'hidden';
+    honeypotInput.name = 'bot-field';
+    honeypotInput.value = '';
+    tempForm.appendChild(honeypotInput);
+    
+    document.body.appendChild(tempForm);
+    
+    // Submit the form
+    tempForm.submit();
+    
+    // Trigger webhook for make.com automation
+    triggerWebhook(formObject);
+    
+    // Show success message
+    showNotification('Thank you! Your consultation request has been submitted. We\'ll contact you within 24 hours.', 'success');
+    form.reset();
+    
+    // Reset button
+    submitButton.innerHTML = originalText;
+    submitButton.disabled = false;
+    
+    // Clean up
+    document.body.removeChild(tempForm);
+}
+
+// Function to trigger webhook for make.com automation
+function triggerWebhook(formData) {
+    // Get webhook URL from config
+    const webhookUrl = typeof CONFIG !== 'undefined' ? CONFIG.MAKE_WEBHOOK_URL : 'YOUR_MAKE_COM_WEBHOOK_URL_HERE';
+    
+    if (webhookUrl && webhookUrl !== 'YOUR_MAKE_COM_WEBHOOK_URL_HERE') {
+        fetch(webhookUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                name: formData.name,
+                email: formData.email,
+                phone: formData.phone,
+                service: formData.service,
+                message: formData.message || '',
+                timestamp: formData.timestamp,
+                source: formData.source
+            })
+        })
+        .then(response => {
+            if (response.ok) {
+                console.log('Webhook triggered successfully');
+            } else {
+                console.error('Webhook failed:', response.status);
+            }
+        })
+        .catch(error => {
+            console.error('Webhook error:', error);
+        });
+    } else {
+        console.log('Webhook URL not configured - skipping automation trigger');
+    }
 }
 
 // Notification system
