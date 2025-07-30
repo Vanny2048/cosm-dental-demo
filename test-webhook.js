@@ -1,54 +1,69 @@
 #!/usr/bin/env node
 
-// Test script for webhook functionality
-// Using built-in fetch (available in Node.js 18+)
-
-// Webhook URL from config
-const MAKE_WEBHOOK_URL = 'https://hook.us2.make.com/2wabyrnjjipw4m2c5gg7lclqi7bx2n5d';
-
-// Test data
-const testData = {
-    name: 'Test User',
-    email: 'test@example.com',
-    phone: '+1234567890',
-    service: 'teeth-whitening',
-    message: 'This is a test webhook from Node.js script',
-    timestamp: new Date().toISOString(),
-    source: 'node-test-script',
-    testId: `node-test-${Date.now()}`
-};
+// Simple webhook test script
+const webhookUrl = 'https://hook.us2.make.com/2wabyrnjjipw4m2c5gg7lclqi7bx2n5d';
 
 async function testWebhook() {
-    console.log('🔧 Testing webhook functionality...');
-    console.log('Webhook URL:', MAKE_WEBHOOK_URL);
-    console.log('Test data:', JSON.stringify(testData, null, 2));
-    
+    const testData = {
+        name: 'Test User',
+        email: 'test@example.com',
+        phone: '+1234567890',
+        service: 'consultation',
+        message: 'This is a test message from the webhook test script',
+        timestamp: new Date().toISOString(),
+        source: 'webhook-test-script',
+        submissionId: `script-test-${Date.now()}`
+    };
+
+    console.log('Testing webhook with data:', JSON.stringify(testData, null, 2));
+
     try {
-        const response = await fetch(MAKE_WEBHOOK_URL, {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10000);
+
+        const startTime = Date.now();
+        const response = await fetch(webhookUrl, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
             },
-            body: JSON.stringify(testData)
+            body: JSON.stringify(testData),
+            signal: controller.signal
         });
-        
-        console.log('Response status:', response.status);
-        console.log('Response headers:', Object.fromEntries(response.headers.entries()));
-        
+
+        clearTimeout(timeoutId);
+        const endTime = Date.now();
+        const duration = endTime - startTime;
+
+        console.log(`Response received in ${duration}ms`);
+        console.log(`Status: ${response.status}`);
+        console.log(`OK: ${response.ok}`);
+
         if (response.ok) {
-            const responseText = await response.text();
             console.log('✅ Webhook test successful!');
-            console.log('Response body:', responseText);
+            
+            // Try to get response body
+            try {
+                const responseText = await response.text();
+                if (responseText) {
+                    console.log('Response body:', responseText);
+                }
+            } catch (e) {
+                console.log('No response body available');
+            }
         } else {
-            console.log('❌ Webhook test failed!');
-            console.log('Error status:', response.status);
-            const errorText = await response.text();
-            console.log('Error body:', errorText);
+            console.log('❌ Webhook test failed');
+            console.log('Response status:', response.status);
         }
     } catch (error) {
-        console.log('❌ Webhook test error:', error.message);
+        if (error.name === 'AbortError') {
+            console.log('❌ Webhook test timed out after 10 seconds');
+        } else {
+            console.log('❌ Webhook test error:', error.message);
+        }
     }
 }
 
 // Run the test
+console.log('Starting webhook test...');
 testWebhook();

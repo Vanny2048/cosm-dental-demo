@@ -60,34 +60,43 @@ exports.handler = async (event, context) => {
       message: message ? message.trim() : '',
       submittedAt: new Date().toISOString(),
       status: 'new',
-      source: 'website'
+      source: 'website',
+      submissionId: formData.submissionId || `func_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
     };
 
-    // Connect to MongoDB
-    const client = new MongoClient(MONGODB_URI);
-    await client.connect();
+    let dbResult = null;
 
-    const db = client.db(DB_NAME);
-    const collection = db.collection(COLLECTION_NAME);
-
-    // Insert the lead into the database
-    const result = await collection.insertOne(lead);
-
-    // Close the connection
-    await client.close();
-
-    // Log the submission (for debugging)
-    console.log('Lead submitted:', {
-      id: result.insertedId,
-      name: lead.name,
-      email: lead.email,
-      service: lead.service
-    });
-
-    // Trigger webhook for automation
+    // Try to connect to MongoDB (optional - won't fail if not available)
     try {
-      await triggerWebhook(lead);
-      console.log('Webhook triggered successfully');
+      const client = new MongoClient(MONGODB_URI, {
+        serverSelectionTimeoutMS: 5000, // 5 second timeout
+        connectTimeoutMS: 5000
+      });
+      
+      await client.connect();
+      const db = client.db(DB_NAME);
+      const collection = db.collection(COLLECTION_NAME);
+
+      // Insert the lead into the database
+      dbResult = await collection.insertOne(lead);
+      await client.close();
+
+      console.log('Lead saved to database:', {
+        id: dbResult.insertedId,
+        name: lead.name,
+        email: lead.email,
+        service: lead.service
+      });
+    } catch (dbError) {
+      console.log('Database not available, continuing without database storage:', dbError.message);
+      // Continue without database - this is not a critical failure
+    }
+
+    // Trigger webhook for automation (with timeout)
+    let webhookSuccess = false;
+    try {
+      webhookSuccess = await triggerWebhookWithTimeout(lead);
+      console.log('Webhook result:', webhookSuccess ? 'success' : 'failed');
     } catch (webhookError) {
       console.error('Webhook error:', webhookError);
       // Don't fail the form submission if webhook fails
@@ -100,43 +109,39 @@ exports.handler = async (event, context) => {
       body: JSON.stringify({
         success: true,
         message: 'Thank you! Your consultation request has been submitted. We\'ll contact you within 24 hours.',
-        leadId: result.insertedId
+        leadId: dbResult ? dbResult.insertedId : null,
+        webhookSuccess: webhookSuccess,
+        submissionId: lead.submissionId
       })
     };
 
   } catch (error) {
     console.error('Error submitting form:', error);
 
-    // If MongoDB is not available, still try to trigger webhook
-    try {
-      await triggerWebhook(lead);
-      console.log('Webhook triggered successfully (fallback)');
-    } catch (webhookError) {
-      console.error('Webhook error (fallback):', webhookError);
-    }
-
-    // If MongoDB is not available, fall back to storing in a simple file or just return success
-    // This ensures the form still works even without database setup
     return {
-      statusCode: 200,
+      statusCode: 500,
       headers,
       body: JSON.stringify({
-        success: true,
-        message: 'Thank you! Your consultation request has been submitted. We\'ll contact you within 24 hours.',
-        note: 'Database connection not available, but your request has been received.'
+        success: false,
+        error: 'Internal server error',
+        message: 'There was an error processing your request. Please try again.'
       })
     };
   }
 };
 
-// Function to trigger webhook for make.com automation
-async function triggerWebhook(formData) {
+// Function to trigger webhook with timeout
+async function triggerWebhookWithTimeout(formData) {
   if (!MAKE_WEBHOOK_URL) {
     console.log('Webhook URL not configured - skipping automation trigger');
-    return;
+    return false;
   }
 
   try {
+    // Create AbortController for timeout
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 8000); // 8 second timeout
+
     const response = await fetch(MAKE_WEBHOOK_URL, {
       method: 'POST',
       headers: {
@@ -150,17 +155,26 @@ async function triggerWebhook(formData) {
         message: formData.message || '',
         timestamp: formData.submittedAt,
         source: formData.source,
-        leadId: formData._id || 'unknown'
-      })
+        submissionId: formData.submissionId,
+        leadId: formData._id || null
+      }),
+      signal: controller.signal
     });
+
+    clearTimeout(timeoutId);
 
     if (!response.ok) {
       throw new Error(`Webhook failed with status: ${response.status}`);
     }
 
     console.log('Webhook triggered successfully');
+    return true;
   } catch (error) {
-    console.error('Webhook error:', error);
-    throw error;
+    if (error.name === 'AbortError') {
+      console.error('Webhook timeout');
+    } else {
+      console.error('Webhook error:', error);
+    }
+    return false;
   }
 }
