@@ -132,36 +132,50 @@ function submitForm(event) {
     submitButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sending...';
     submitButton.disabled = true;
     
-    // Simulate form submission (replace with actual endpoint)
-    setTimeout(() => {
-        // Success message
-        showNotification('Thank you! Your consultation request has been submitted. We\'ll contact you within 24 hours.', 'success');
-        
-        // Reset form
+    // Check for honeypot field (spam protection)
+    const botField = formData.get('bot-field');
+    if (botField) {
+        // This is likely a bot, silently ignore
         form.reset();
-        
+        submitButton.innerHTML = originalText;
+        submitButton.disabled = false;
+        return;
+    }
+    
+    // Prepare data for submission
+    const formObject = {};
+    formData.forEach((value, key) => {
+        if (key !== 'bot-field' && key !== 'form-name') {
+            formObject[key] = value;
+        }
+    });
+    
+    // Submit to Netlify function
+    fetch('/.netlify/functions/submit-form', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formObject)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showNotification(data.message, 'success');
+            form.reset();
+        } else {
+            showNotification('There was an error submitting your form. Please try again.', 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showNotification('There was an error submitting your form. Please try again.', 'error');
+    })
+    .finally(() => {
         // Reset button
         submitButton.innerHTML = originalText;
         submitButton.disabled = false;
-        
-        // Here you would typically send the data to your backend
-        // For demo purposes, we'll just log the form data
-        const formObject = {};
-        formData.forEach((value, key) => {
-            formObject[key] = value;
-        });
-        console.log('Form submitted:', formObject);
-        
-        // Example webhook integration (replace with your actual endpoint)
-        // fetch('https://your-webhook-endpoint.com', {
-        //     method: 'POST',
-        //     headers: {
-        //         'Content-Type': 'application/json',
-        //     },
-        //     body: JSON.stringify(formObject)
-        // });
-        
-    }, 2000);
+    });
 }
 
 // Notification system
@@ -175,9 +189,15 @@ function showNotification(message, type = 'info') {
     // Create notification element
     const notification = document.createElement('div');
     notification.className = `notification notification-${type}`;
+    
+    // Choose icon based on type
+    let icon = 'fa-info-circle';
+    if (type === 'success') icon = 'fa-check-circle';
+    if (type === 'error') icon = 'fa-exclamation-circle';
+    
     notification.innerHTML = `
         <div class="notification-content">
-            <i class="fas ${type === 'success' ? 'fa-check-circle' : 'fa-info-circle'}"></i>
+            <i class="fas ${icon}"></i>
             <span>${message}</span>
             <button class="notification-close" onclick="this.parentElement.parentElement.remove()">
                 <i class="fas fa-times"></i>
@@ -185,12 +205,17 @@ function showNotification(message, type = 'info') {
         </div>
     `;
     
+    // Choose background color based on type
+    let bgColor = '#2196F3'; // default blue
+    if (type === 'success') bgColor = '#4CAF50'; // green
+    if (type === 'error') bgColor = '#f44336'; // red
+    
     // Add styles
     notification.style.cssText = `
         position: fixed;
         top: 100px;
         right: 20px;
-        background: ${type === 'success' ? '#4CAF50' : '#2196F3'};
+        background: ${bgColor};
         color: white;
         padding: 1rem 1.5rem;
         border-radius: 10px;

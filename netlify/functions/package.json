@@ -1,0 +1,16 @@
+{
+  "name": "lumina-smiles-functions",
+  "version": "1.0.0",
+  "description": "Netlify functions for Lumina Smiles website",
+  "main": "index.js",
+  "dependencies": {
+    "mongodb": "^5.7.0"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": ["netlify", "functions", "dental", "leads"],
+  "author": "Lumina Smiles",
+  "license": "MIT"
+}
