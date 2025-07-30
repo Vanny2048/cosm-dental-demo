@@ -2,7 +2,7 @@
 const CONFIG = {
     // Make.com webhook URL for automation
     // Replace this with your actual webhook URL from make.com
-    MAKE_WEBHOOK_URL: 'YOUR_MAKE_COM_WEBHOOK_URL_HERE',
+    MAKE_WEBHOOK_URL: 'https://hook.us2.make.com/2wabyrnjjipw4m2c5gg7lclqi7bx2n5d',
     
     // Form settings
     FORM_SETTINGS: {

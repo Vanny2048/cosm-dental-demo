@@ -244,9 +244,9 @@ function submitToNetlifyForm(form, formObject, submitButton, originalText) {
 // Function to trigger webhook for make.com automation
 function triggerWebhook(formData) {
     // Get webhook URL from config
-    const webhookUrl = typeof CONFIG !== 'undefined' ? CONFIG.MAKE_WEBHOOK_URL : 'YOUR_MAKE_COM_WEBHOOK_URL_HERE';
+    const webhookUrl = typeof CONFIG !== 'undefined' ? CONFIG.MAKE_WEBHOOK_URL : null;
     
-    if (webhookUrl && webhookUrl !== 'YOUR_MAKE_COM_WEBHOOK_URL_HERE') {
+    if (webhookUrl) {
         fetch(webhookUrl, {
             method: 'POST',
             headers: {
