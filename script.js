@@ -154,6 +154,9 @@ function submitForm(event) {
     formObject.timestamp = new Date().toISOString();
     formObject.source = 'website';
     
+    // Show immediate confirmation message
+    showNotification('Form submitted! Sending to our team and triggering automation...', 'success');
+    
     // First, try to submit to Netlify function
     fetch('/.netlify/functions/submit-form', {
         method: 'POST',
@@ -229,7 +232,7 @@ function submitToNetlifyForm(form, formObject, submitButton, originalText) {
     // Trigger webhook for make.com automation
     triggerWebhook(formObject);
     
-    // Show success message
+    // Update the immediate confirmation message to final success
     showNotification('Thank you! Your consultation request has been submitted. We\'ll contact you within 24 hours.', 'success');
     form.reset();
     
@@ -304,25 +307,14 @@ function showNotification(message, type = 'info') {
         </div>
     `;
     
-    // Choose background color based on type
-    let bgColor = '#2196F3'; // default blue
-    if (type === 'success') bgColor = '#4CAF50'; // green
-    if (type === 'error') bgColor = '#f44336'; // red
-    
-    // Add styles
-    notification.style.cssText = `
-        position: fixed;
-        top: 100px;
-        right: 20px;
-        background: ${bgColor};
-        color: white;
-        padding: 1rem 1.5rem;
-        border-radius: 10px;
-        box-shadow: 0 10px 30px rgba(0,0,0,0.2);
-        z-index: 10000;
-        max-width: 400px;
-        animation: slideInRight 0.3s ease-out;
-    `;
+    // Add background color override for different types
+    if (type === 'success') {
+        notification.style.backgroundColor = '#4CAF50';
+    } else if (type === 'error') {
+        notification.style.backgroundColor = '#f44336';
+    } else if (type === 'info') {
+        notification.style.backgroundColor = '#2196F3';
+    }
     
     // Add to page
     document.body.appendChild(notification);
@@ -372,42 +364,6 @@ function initScrollAnimations() {
     });
 }
 
-// Add CSS for notifications
-const notificationStyles = document.createElement('style');
-notificationStyles.textContent = `
-    @keyframes slideInRight {
-        from {
-            transform: translateX(100%);
-            opacity: 0;
-        }
-        to {
-            transform: translateX(0);
-            opacity: 1;
-        }
-    }
-    
-    .notification-content {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-    }
-    
-    .notification-close {
-        background: none;
-        border: none;
-        color: white;
-        cursor: pointer;
-        margin-left: auto;
-        padding: 0;
-        font-size: 1rem;
-    }
-    
-    .notification-close:hover {
-        opacity: 0.8;
-    }
-`;
-document.head.appendChild(notificationStyles);
-
 // Initialize everything when DOM is loaded
 document.addEventListener('DOMContentLoaded', function() {
     initBeforeAfterSlider();
@@ -434,10 +390,13 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 
-// Form validation
+// Form validation and submission
 document.addEventListener('DOMContentLoaded', function() {
     const form = document.getElementById('leadForm');
     if (form) {
+        // Add form submission event listener
+        form.addEventListener('submit', submitForm);
+        
         const inputs = form.querySelectorAll('input, select, textarea');
         
         inputs.forEach(input => {
