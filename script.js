@@ -114,199 +114,317 @@ function initBeforeAfterSlider() {
     document.addEventListener('touchend', () => {
         isResizing = false;
     });
-    
-    // Initialize slider at 50%
-    updateSliderPosition(sliderContainer.getBoundingClientRect().left + sliderContainer.offsetWidth / 2);
 }
 
-// Form submission functionality
-function submitForm(event) {
-    event.preventDefault();
+// ===== BULLETPROOF FORM SUBMISSION SYSTEM =====
+
+// Debug logging system
+const DEBUG = {
+    enabled: true,
+    log: function(message, type = 'info') {
+        if (!this.enabled) return;
+        const timestamp = new Date().toLocaleTimeString();
+        const logMessage = `[${timestamp}] [${type.toUpperCase()}] ${message}`;
+        console.log(logMessage);
+        
+        // Also log to a visible debug area if it exists
+        const debugArea = document.getElementById('debug-log');
+        if (debugArea) {
+            debugArea.innerHTML += `<div>[${timestamp}] ${type.toUpperCase()}: ${message}</div>`;
+            debugArea.scrollTop = debugArea.scrollHeight;
+        }
+    },
     
-    const form = event.target;
-    const formData = new FormData(form);
-    const submitButton = form.querySelector('.submit-button');
-    const originalText = submitButton.innerHTML;
+    error: function(message) { this.log(message, 'error'); },
+    success: function(message) { this.log(message, 'success'); },
+    warning: function(message) { this.log(message, 'warning'); },
+    info: function(message) { this.log(message, 'info'); }
+};
+
+// Configuration validation
+function validateConfiguration() {
+    DEBUG.info('Validating configuration...');
     
-    // Show loading state
-    submitButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Submitting...';
-    submitButton.disabled = true;
-    
-    // Check for honeypot field (spam protection)
-    const botField = formData.get('bot-field');
-    if (botField) {
-        // This is likely a bot, silently ignore
-        form.reset();
-        submitButton.innerHTML = originalText;
-        submitButton.disabled = false;
-        return;
+    // Check if CONFIG exists
+    if (typeof CONFIG === 'undefined') {
+        DEBUG.error('CONFIG object not found! Check if config.js is loaded.');
+        return false;
     }
     
-    // Prepare data for submission
-    const formObject = {};
-    formData.forEach((value, key) => {
-        if (key !== 'bot-field' && key !== 'form-name') {
-            formObject[key] = value;
+    // Check webhook URL
+    if (!CONFIG.MAKE_WEBHOOK_URL) {
+        DEBUG.error('MAKE_WEBHOOK_URL not configured in CONFIG object');
+        return false;
+    }
+    
+    // Validate webhook URL format
+    try {
+        new URL(CONFIG.MAKE_WEBHOOK_URL);
+        DEBUG.success(`Webhook URL validated: ${CONFIG.MAKE_WEBHOOK_URL}`);
+    } catch (e) {
+        DEBUG.error(`Invalid webhook URL format: ${CONFIG.MAKE_WEBHOOK_URL}`);
+        return false;
+    }
+    
+    // Check if fetch is available
+    if (typeof fetch === 'undefined') {
+        DEBUG.error('fetch API not available in this browser');
+        return false;
+    }
+    
+    DEBUG.success('Configuration validation passed');
+    return true;
+}
+
+// Form validation
+function validateForm(form) {
+    DEBUG.info('Validating form...');
+    
+    if (!form) {
+        DEBUG.error('Form element is null or undefined');
+        return false;
+    }
+    
+    if (!(form instanceof HTMLFormElement)) {
+        DEBUG.error('Element is not a form');
+        return false;
+    }
+    
+    // Check for required fields
+    const requiredFields = ['name', 'email', 'phone', 'service'];
+    const missingFields = [];
+    
+    requiredFields.forEach(fieldName => {
+        const field = form.querySelector(`[name="${fieldName}"]`);
+        if (!field) {
+            missingFields.push(fieldName);
         }
     });
     
-    // Add timestamp and source
-    formObject.timestamp = new Date().toISOString();
-    formObject.source = 'website';
-    formObject.submissionId = generateSubmissionId();
+    if (missingFields.length > 0) {
+        DEBUG.error(`Missing required form fields: ${missingFields.join(', ')}`);
+        return false;
+    }
     
-    // Show initial processing message
-    showNotification('Processing your request...', 'info');
-    
-    // Submit to Netlify's built-in form handling (faster and more reliable)
-    submitToNetlifyForm(form, formObject, submitButton, originalText);
+    DEBUG.success('Form validation passed');
+    return true;
 }
 
-// Submit to both Netlify and Make.com webhook
-async function submitToNetlifyForm(form, formObject, submitButton, originalText) {
+// Extract form data safely
+function extractFormData(form) {
+    DEBUG.info('Extracting form data...');
+    
+    const formData = new FormData(form);
+    const data = {};
+    
+    // Extract all form fields
+    formData.forEach((value, key) => {
+        if (key !== 'bot-field' && key !== 'form-name') {
+            data[key] = value.trim();
+        }
+    });
+    
+    // Add metadata
+    data.timestamp = new Date().toISOString();
+    data.source = 'website';
+    data.submissionId = generateSubmissionId();
+    data.userAgent = navigator.userAgent;
+    data.url = window.location.href;
+    
+    DEBUG.info(`Form data extracted: ${JSON.stringify(data, null, 2)}`);
+    return data;
+}
+
+// Send to Make.com webhook with extensive error handling
+async function sendToMakeWebhook(data) {
+    DEBUG.info('Sending to Make.com webhook...');
+    
+    if (!validateConfiguration()) {
+        DEBUG.error('Configuration validation failed - cannot send webhook');
+        return { success: false, error: 'Configuration invalid' };
+    }
+    
+    const webhookUrl = CONFIG.MAKE_WEBHOOK_URL;
+    
     try {
-        // Update notification to show processing
-        showNotification('Processing your request...', 'info');
+        // Prepare the request
+        const requestBody = JSON.stringify(data);
+        DEBUG.info(`Request body: ${requestBody}`);
         
-        // 1. Send to Make.com webhook first (for immediate automation)
-        const webhookUrl = typeof CONFIG !== 'undefined' ? CONFIG.MAKE_WEBHOOK_URL : null;
-        let webhookSuccess = false;
+        // Set up timeout
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => {
+            controller.abort();
+            DEBUG.error('Webhook request timed out after 15 seconds');
+        }, 15000);
         
-        if (webhookUrl) {
-            try {
-                console.log('Sending to Make.com webhook:', webhookUrl);
-                const webhookResponse = await fetch(webhookUrl, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify(formObject)
-                });
-                
-                webhookSuccess = webhookResponse.ok;
-                console.log('Webhook response:', webhookResponse.status, webhookSuccess ? 'SUCCESS' : 'FAILED');
-                
-                if (webhookSuccess) {
-                    showNotification('Automation triggered! Processing your request...', 'info');
-                }
-            } catch (webhookError) {
-                console.error('Webhook error:', webhookError);
+        // Make the request
+        const startTime = Date.now();
+        const response = await fetch(webhookUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+                'User-Agent': 'Lumina-Smiles-Website/1.0'
+            },
+            body: requestBody,
+            signal: controller.signal
+        });
+        
+        clearTimeout(timeoutId);
+        const duration = Date.now() - startTime;
+        
+        DEBUG.info(`Webhook response received in ${duration}ms`);
+        DEBUG.info(`Response status: ${response.status}`);
+        DEBUG.info(`Response ok: ${response.ok}`);
+        
+        // Try to get response body for debugging
+        let responseBody = '';
+        try {
+            responseBody = await response.text();
+            if (responseBody) {
+                DEBUG.info(`Response body: ${responseBody}`);
             }
+        } catch (e) {
+            DEBUG.warning('Could not read response body');
         }
         
-        // 2. Send to Netlify for form logging (using fetch instead of form.submit())
+        if (response.ok) {
+            DEBUG.success('Webhook sent successfully to Make.com');
+            return { success: true, response: responseBody };
+        } else {
+            DEBUG.error(`Webhook failed with status ${response.status}: ${responseBody}`);
+            return { 
+                success: false, 
+                error: `HTTP ${response.status}`, 
+                details: responseBody 
+            };
+        }
+        
+    } catch (error) {
+        if (error.name === 'AbortError') {
+            DEBUG.error('Webhook request timed out');
+            return { success: false, error: 'Timeout' };
+        } else if (error.name === 'TypeError' && error.message.includes('fetch')) {
+            DEBUG.error('Network error - possible CORS issue or network problem');
+            return { success: false, error: 'Network error' };
+        } else {
+            DEBUG.error(`Webhook error: ${error.message}`);
+            return { success: false, error: error.message };
+        }
+    }
+}
+
+// Send to Netlify for backup (optional)
+async function sendToNetlify(form, data) {
+    DEBUG.info('Sending backup to Netlify...');
+    
+    try {
+        // Create a new FormData for Netlify
         const netlifyData = new FormData();
         netlifyData.append('form-name', 'contact');
         netlifyData.append('bot-field', '');
         
-        // Add all form data to Netlify
-        Object.keys(formObject).forEach(key => {
-            if (key !== 'timestamp' && key !== 'source' && key !== 'submissionId') {
-                netlifyData.append(key, formObject[key]);
+        // Add form fields (excluding metadata)
+        Object.keys(data).forEach(key => {
+            if (!['timestamp', 'source', 'submissionId', 'userAgent', 'url'].includes(key)) {
+                netlifyData.append(key, data[key]);
             }
         });
         
-        console.log('Sending to Netlify for logging...');
-        const netlifyResponse = await fetch('/', {
+        const response = await fetch('/', {
             method: 'POST',
             body: netlifyData
         });
         
-        console.log('Netlify response:', netlifyResponse.status);
+        DEBUG.info(`Netlify response: ${response.status}`);
+        return response.ok;
         
-        // 3. Show success message
-        if (webhookSuccess) {
+    } catch (error) {
+        DEBUG.error(`Netlify backup failed: ${error.message}`);
+        return false;
+    }
+}
+
+// Main form submission handler - BULLETPROOF VERSION
+async function submitForm(event) {
+    DEBUG.info('=== FORM SUBMISSION STARTED ===');
+    
+    // CRITICAL: Prevent default form submission
+    event.preventDefault();
+    DEBUG.info('Default form submission prevented');
+    
+    const form = event.target;
+    const submitButton = form.querySelector('.submit-button');
+    const originalText = submitButton ? submitButton.innerHTML : 'Submit';
+    
+    // Show loading state
+    if (submitButton) {
+        submitButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Submitting...';
+        submitButton.disabled = true;
+    }
+    
+    try {
+        // Step 1: Validate form
+        if (!validateForm(form)) {
+            throw new Error('Form validation failed');
+        }
+        
+        // Step 2: Check for honeypot
+        const formData = new FormData(form);
+        const botField = formData.get('bot-field');
+        if (botField) {
+            DEBUG.warning('Bot field detected - likely spam, silently ignoring');
+            form.reset();
+            return;
+        }
+        
+        // Step 3: Extract form data
+        const data = extractFormData(form);
+        
+        // Step 4: Show processing message
+        showNotification('Processing your request...', 'info');
+        
+        // Step 5: Send to Make.com webhook FIRST (most important)
+        DEBUG.info('Sending to Make.com webhook...');
+        const webhookResult = await sendToMakeWebhook(data);
+        
+        if (webhookResult.success) {
+            DEBUG.success('Make.com webhook successful!');
+            showNotification('Automation triggered! Processing your request...', 'info');
+        } else {
+            DEBUG.error(`Make.com webhook failed: ${webhookResult.error}`);
+            showNotification('Warning: Automation may not have triggered. Your form will still be processed.', 'warning');
+        }
+        
+        // Step 6: Send backup to Netlify (optional)
+        try {
+            await sendToNetlify(form, data);
+            DEBUG.info('Netlify backup sent');
+        } catch (netlifyError) {
+            DEBUG.warning(`Netlify backup failed: ${netlifyError.message}`);
+        }
+        
+        // Step 7: Show success message
+        if (webhookResult.success) {
             showNotification('Thank you! Your consultation request has been submitted and processed. We\'ll contact you within 24 hours.', 'success');
         } else {
             showNotification('Your form was submitted successfully! We\'ll contact you within 24 hours.', 'success');
         }
         
-        // Reset form
+        // Step 8: Reset form
         form.reset();
+        DEBUG.success('=== FORM SUBMISSION COMPLETED SUCCESSFULLY ===');
         
     } catch (error) {
-        console.error('Form submission error:', error);
-        showNotification('Your form was submitted successfully! We\'ll contact you within 24 hours.', 'success');
-        form.reset();
+        DEBUG.error(`Form submission error: ${error.message}`);
+        showNotification('There was an error submitting your form. Please try again.', 'error');
     } finally {
-        // Reset button
+        // Restore submit button
+        if (submitButton) {
             submitButton.innerHTML = originalText;
             submitButton.disabled = false;
-            
-            // Clean up
-            document.body.removeChild(tempForm);
-        });
-}
-
-// Function to trigger webhook with verification
-async function triggerWebhookWithVerification(formData) {
-    const webhookUrl = typeof CONFIG !== 'undefined' ? CONFIG.MAKE_WEBHOOK_URL : null;
-    
-    if (!webhookUrl) {
-        console.log('Webhook URL not configured - skipping automation trigger');
-        return false;
-    }
-    
-    try {
-        // Send webhook with timeout
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
-        
-        const response = await fetch(webhookUrl, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                name: formData.name,
-                email: formData.email,
-                phone: formData.phone,
-                service: formData.service,
-                message: formData.message || '',
-                timestamp: formData.timestamp,
-                source: formData.source,
-                submissionId: formData.submissionId
-            }),
-            signal: controller.signal
-        });
-        
-        clearTimeout(timeoutId);
-        
-        if (response.ok) {
-            console.log('Webhook triggered successfully');
-            
-            // Wait a moment for make.com to process
-            await new Promise(resolve => setTimeout(resolve, 2000));
-            
-            // Try to verify webhook reception (optional - make.com doesn't always provide verification)
-            try {
-                const verificationResponse = await fetch(`${webhookUrl}/verify`, {
-                    method: 'GET',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    }
-                });
-                
-                if (verificationResponse.ok) {
-                    console.log('Webhook verification successful');
-                    return true;
-                }
-            } catch (verificationError) {
-                console.log('Webhook verification not available, assuming success');
-            }
-            
-            return true;
-        } else {
-            console.error('Webhook failed:', response.status);
-            return false;
         }
-    } catch (error) {
-        if (error.name === 'AbortError') {
-            console.error('Webhook timeout');
-        } else {
-            console.error('Webhook error:', error);
-        }
-        return false;
     }
 }
 
@@ -331,6 +449,7 @@ function showNotification(message, type = 'info') {
     let icon = 'fa-info-circle';
     if (type === 'success') icon = 'fa-check-circle';
     if (type === 'error') icon = 'fa-exclamation-circle';
+    if (type === 'warning') icon = 'fa-exclamation-triangle';
     
     notification.innerHTML = `
         <div class="notification-content">
@@ -342,19 +461,10 @@ function showNotification(message, type = 'info') {
         </div>
     `;
     
-    // Add background color override for different types
-    if (type === 'success') {
-        notification.style.backgroundColor = '#4CAF50';
-    } else if (type === 'error') {
-        notification.style.backgroundColor = '#f44336';
-    } else if (type === 'info') {
-        notification.style.backgroundColor = '#2196F3';
-    }
-    
     // Add to page
     document.body.appendChild(notification);
     
-    // Auto remove after 5 seconds
+    // Auto-remove after 5 seconds
     setTimeout(() => {
         if (notification.parentElement) {
             notification.remove();
@@ -362,18 +472,15 @@ function showNotification(message, type = 'info') {
     }, 5000);
 }
 
-// Scroll to contact function
+// Scroll to contact section
 function scrollToContact() {
     const contactSection = document.getElementById('contact');
     if (contactSection) {
-        contactSection.scrollIntoView({
-            behavior: 'smooth',
-            block: 'start'
-        });
+        contactSection.scrollIntoView({ behavior: 'smooth' });
     }
 }
 
-// Intersection Observer for animations
+// Initialize scroll animations
 function initScrollAnimations() {
     const observerOptions = {
         threshold: 0.1,
@@ -383,79 +490,26 @@ function initScrollAnimations() {
     const observer = new IntersectionObserver((entries) => {
         entries.forEach(entry => {
             if (entry.isIntersecting) {
-                entry.target.style.opacity = '1';
-                entry.target.style.transform = 'translateY(0)';
+                entry.target.classList.add('animate-in');
             }
         });
     }, observerOptions);
     
-    // Observe elements for animation
-    const animateElements = document.querySelectorAll('.service-card, .testimonial-card, .credential, .contact-item');
-    animateElements.forEach(el => {
-        el.style.opacity = '0';
-        el.style.transform = 'translateY(30px)';
-        el.style.transition = 'opacity 0.6s ease, transform 0.6s ease';
+    // Observe elements with animation classes
+    document.querySelectorAll('.fade-in, .slide-in, .scale-in').forEach(el => {
         observer.observe(el);
     });
 }
 
-// Initialize everything when DOM is loaded
-document.addEventListener('DOMContentLoaded', function() {
-    initBeforeAfterSlider();
-    initScrollAnimations();
-    
-    // Add some interactive hover effects
-    document.querySelectorAll('.service-card').forEach(card => {
-        card.addEventListener('mouseenter', function() {
-            this.style.transform = 'translateY(-10px) scale(1.02)';
-        });
-        
-        card.addEventListener('mouseleave', function() {
-            this.style.transform = 'translateY(0) scale(1)';
-        });
-    });
-    
-    // Add parallax effect to hero section
-    window.addEventListener('scroll', () => {
-        const scrolled = window.pageYOffset;
-        const heroBackground = document.querySelector('.hero-background');
-        if (heroBackground) {
-            heroBackground.style.transform = `translateY(${scrolled * 0.5}px)`;
-        }
-    });
-});
-
-// Form validation and submission
-document.addEventListener('DOMContentLoaded', function() {
-    const form = document.getElementById('leadForm');
-    if (form) {
-        // Add form submission event listener
-        form.addEventListener('submit', submitForm);
-        
-        const inputs = form.querySelectorAll('input, select, textarea');
-        
-        inputs.forEach(input => {
-            input.addEventListener('blur', function() {
-                validateField(this);
-            });
-            
-            input.addEventListener('input', function() {
-                if (this.classList.contains('error')) {
-                    validateField(this);
-                }
-            });
-        });
-    }
-});
-
+// Field validation
 function validateField(field) {
     const value = field.value.trim();
     const fieldName = field.name;
     
-    // Remove existing error styling
-    field.classList.remove('error');
+    // Remove existing validation classes
+    field.classList.remove('valid', 'invalid');
     
-    // Validation rules
+    // Validate based on field type
     let isValid = true;
     let errorMessage = '';
     
@@ -463,9 +517,10 @@ function validateField(field) {
         case 'name':
             if (value.length < 2) {
                 isValid = false;
-                errorMessage = 'Name must be at least 2 characters long';
+                errorMessage = 'Name must be at least 2 characters';
             }
             break;
+            
         case 'email':
             const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
             if (!emailRegex.test(value)) {
@@ -473,50 +528,101 @@ function validateField(field) {
                 errorMessage = 'Please enter a valid email address';
             }
             break;
+            
         case 'phone':
             const phoneRegex = /^[\+]?[1-9][\d]{0,15}$/;
-            if (!phoneRegex.test(value.replace(/[\s\-\(\)]/g, ''))) {
+            const cleanPhone = value.replace(/[\s\-\(\)]/g, '');
+            if (!phoneRegex.test(cleanPhone)) {
                 isValid = false;
                 errorMessage = 'Please enter a valid phone number';
             }
             break;
+            
         case 'service':
-            if (value === '') {
+            if (!value) {
                 isValid = false;
                 errorMessage = 'Please select a service';
             }
             break;
     }
     
-    if (!isValid) {
-        field.classList.add('error');
-        field.style.borderColor = '#ff6b6b';
-        field.style.boxShadow = '0 0 0 3px rgba(255, 107, 107, 0.1)';
-        
-        // Show error message
-        let errorElement = field.parentNode.querySelector('.error-message');
-        if (!errorElement) {
-            errorElement = document.createElement('div');
-            errorElement.className = 'error-message';
-            errorElement.style.cssText = `
-                color: #ff6b6b;
-                font-size: 0.8rem;
-                margin-top: 5px;
-                margin-left: 5px;
-            `;
-            field.parentNode.appendChild(errorElement);
-        }
-        errorElement.textContent = errorMessage;
+    // Apply validation styling
+    if (isValid) {
+        field.classList.add('valid');
     } else {
-        field.style.borderColor = '#d4af37';
-        field.style.boxShadow = '0 0 0 3px rgba(212, 175, 55, 0.1)';
-        
-        // Remove error message
-        const errorElement = field.parentNode.querySelector('.error-message');
-        if (errorElement) {
+        field.classList.add('invalid');
+    }
+    
+    // Show/hide error message
+    let errorElement = field.parentElement.querySelector('.field-error');
+    if (!errorElement && !isValid) {
+        errorElement = document.createElement('div');
+        errorElement.className = 'field-error';
+        field.parentElement.appendChild(errorElement);
+    }
+    
+    if (errorElement) {
+        if (isValid) {
             errorElement.remove();
+        } else {
+            errorElement.textContent = errorMessage;
         }
     }
     
     return isValid;
 }
+
+// Initialize everything when DOM is loaded
+document.addEventListener('DOMContentLoaded', function() {
+    DEBUG.info('DOM loaded - initializing form system...');
+    
+    // Initialize scroll animations
+    initScrollAnimations();
+    
+    // Initialize before/after slider
+    initBeforeAfterSlider();
+    
+    // Find and set up the contact form
+    const contactForm = document.querySelector('form[name="contact"], form[data-netlify="true"], #contact-form');
+    
+    if (contactForm) {
+        DEBUG.info('Contact form found, setting up event listeners...');
+        
+        // Remove any existing event listeners by cloning the form
+        const newForm = contactForm.cloneNode(true);
+        contactForm.parentNode.replaceChild(newForm, contactForm);
+        
+        // Add submit event listener
+        newForm.addEventListener('submit', submitForm);
+        DEBUG.success('Form submit event listener added');
+        
+        // Add real-time validation
+        const inputs = newForm.querySelectorAll('input, select, textarea');
+        inputs.forEach(input => {
+            input.addEventListener('blur', () => validateField(input));
+            input.addEventListener('input', () => {
+                if (input.classList.contains('invalid')) {
+                    validateField(input);
+                }
+            });
+        });
+        
+        DEBUG.success('Form validation listeners added');
+        
+    } else {
+        DEBUG.error('No contact form found! Check form selectors.');
+    }
+    
+    // Validate configuration
+    if (!validateConfiguration()) {
+        DEBUG.error('Configuration validation failed - webhook will not work!');
+    }
+    
+    DEBUG.info('Form system initialization complete');
+});
+
+// Export functions for testing
+window.submitForm = submitForm;
+window.sendToMakeWebhook = sendToMakeWebhook;
+window.validateConfiguration = validateConfiguration;
+window.DEBUG = DEBUG;
