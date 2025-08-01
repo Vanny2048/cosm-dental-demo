@@ -8,6 +8,7 @@ const BuddyChat = () => {
   const [messages, setMessages] = useState([]);
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [modelStatus, setModelStatus] = useState(null);
   const messagesEndRef = useRef(null);
   const { user } = useUser();
 
@@ -19,17 +20,6 @@ const BuddyChat = () => {
     "Where's the best study spot?"
   ];
 
-  // Mock chatbot responses for development
-  const mockResponses = {
-    "What's the best late-night food on campus?": "Omg the Lair is literally the GOAT for late night munchies! 🍕 Their pizza hits different at 2am, and the fries are *chef's kiss*. Also, the Den has some fire chicken tenders if you're feeling that vibe. Pro tip: bring your student ID for the discount! 💅✨",
-    
-    "How do I join Greek life?": "Yasss Greek life is where it's at! 🏛️ First, go to the Greek Life mixer this Friday (I'll send you the deets). Then check out rush week in the spring - it's like a whole vibe! Each house has their own personality, so go to as many events as you can. My friend Sarah just joined Alpha Phi and she's living her best life! DM me if you want the tea on specific houses 👀",
-    
-    "What's happening this weekend?": "This weekend is gonna be LIT! 🔥 Friday we have the basketball game vs USC (wear your LMU gear!), Saturday is the Greek mixer in the Sunken Garden, and Sunday there's a study session at the library for finals prep. Plus, there's a campus spirit challenge going on - you can earn points and prizes! Are you going to any of these? I can give you the full tea ☕",
-    
-    "Where's the best study spot?": "The library is obviously the classic choice, but here's the real tea: 🫖 The 3rd floor of the library has the best views and is usually quieter. The Den has great vibes if you want background noise, and the new student center has these amazing pods that are perfect for group study sessions. My secret spot? The rooftop of the business building - it's so aesthetic and peaceful! 📚✨"
-  };
-
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
@@ -37,6 +27,11 @@ const BuddyChat = () => {
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  // Check Llama model status on component mount
+  useEffect(() => {
+    checkModelStatus();
+  }, []);
 
   // Initialize with welcome message
   useEffect(() => {
@@ -46,11 +41,29 @@ const BuddyChat = () => {
           id: 1,
           type: 'bot',
           content: `Hey ${user?.name || 'Lion'}! 🦁 I'm your LMU GenZ Buddy - your go-to for all things campus life! Ask me anything about events, food, study spots, Greek life, or just general LMU vibes. I'm here to help you live your best college life! ✨`,
-          timestamp: new Date()
+          timestamp: new Date(),
+          model: modelStatus?.available ? 'llama-genz-buddy' : 'fallback'
         }
       ]);
     }
-  }, [isOpen, user?.name]);
+  }, [isOpen, user?.name, modelStatus]);
+
+  const checkModelStatus = async () => {
+    try {
+      const response = await fetch('/api/llama/status');
+      const data = await response.json();
+      setModelStatus(data);
+      
+      if (data.available) {
+        console.log('✅ Llama model is available and connected');
+      } else {
+        console.log('⚠️ Using fallback responses - Llama model not available');
+      }
+    } catch (error) {
+      console.error('Error checking model status:', error);
+      setModelStatus({ available: false, status: 'error' });
+    }
+  };
 
   const sendMessage = async (content) => {
     if (!content.trim()) return;
@@ -67,27 +80,58 @@ const BuddyChat = () => {
     setIsLoading(true);
 
     try {
-      // Simulate API call delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Prepare conversation history for context
+      const conversationHistory = messages.map(msg => ({
+        type: msg.type,
+        content: msg.content
+      }));
 
-      // Get mock response or generate one
-      let botResponse = mockResponses[content] || 
-        "That's a great question! 🤔 Let me think... Honestly, I'm still learning about everything on campus, but I'd recommend checking out the student activities page or asking around! The LMU community is super helpful. What else can I help you with? 💫";
+      // Make API call to Llama model
+      const response = await fetch('/api/genz-buddy', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          message: content.trim(),
+          conversation_history: conversationHistory
+        })
+      });
 
-      const botMessage = {
-        id: Date.now() + 1,
-        type: 'bot',
-        content: botResponse,
-        timestamp: new Date()
-      };
+      if (!response.ok) {
+        throw new Error(`API error: ${response.status}`);
+      }
 
-      setMessages(prev => [...prev, botMessage]);
+      const data = await response.json();
+
+      if (data.success) {
+        const botMessage = {
+          id: Date.now() + 1,
+          type: 'bot',
+          content: data.response,
+          timestamp: new Date(),
+          model: data.model || 'unknown'
+        };
+
+        setMessages(prev => [...prev, botMessage]);
+        
+        // Show model indicator if using fallback
+        if (data.model === 'fallback') {
+          console.log('Using fallback response - Llama model unavailable');
+        }
+      } else {
+        throw new Error(data.error || 'Failed to get response');
+      }
+
     } catch (error) {
+      console.error('Error sending message:', error);
+      
       const errorMessage = {
         id: Date.now() + 1,
         type: 'bot',
         content: "Oops! Something went wrong. 😅 Try asking me something else!",
-        timestamp: new Date()
+        timestamp: new Date(),
+        model: 'error'
       };
       setMessages(prev => [...prev, errorMessage]);
     } finally {
@@ -118,6 +162,9 @@ const BuddyChat = () => {
       >
         <span className="buddy-icon">🦁</span>
         <span className="buddy-text">Ask Buddy</span>
+        {modelStatus?.available && (
+          <span className="model-indicator" title="Llama model connected">✨</span>
+        )}
       </motion.button>
 
       {/* Chat Modal */}
@@ -144,7 +191,14 @@ const BuddyChat = () => {
                 </div>
                 <div className="chat-info">
                   <h3 className="chat-title">LMU GenZ Buddy</h3>
-                  <p className="chat-subtitle">Your campus bestie ✨</p>
+                  <p className="chat-subtitle">
+                    Your campus bestie ✨
+                    {modelStatus?.available ? (
+                      <span className="model-status connected"> • Llama Powered</span>
+                    ) : (
+                      <span className="model-status fallback"> • Fallback Mode</span>
+                    )}
+                  </p>
                 </div>
                 <button 
                   className="chat-close"
@@ -167,11 +221,18 @@ const BuddyChat = () => {
                     <div className="message-content">
                       {message.content}
                     </div>
-                    <div className="message-time">
-                      {message.timestamp.toLocaleTimeString([], { 
-                        hour: '2-digit', 
-                        minute: '2-digit' 
-                      })}
+                    <div className="message-meta">
+                      <div className="message-time">
+                        {message.timestamp.toLocaleTimeString([], { 
+                          hour: '2-digit', 
+                          minute: '2-digit' 
+                        })}
+                      </div>
+                      {message.model && message.model !== 'llama-genz-buddy' && (
+                        <div className="message-model">
+                          {message.model === 'fallback' ? '🤖' : '⚠️'}
+                        </div>
+                      )}
                     </div>
                   </motion.div>
                 ))}

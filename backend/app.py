@@ -2,9 +2,22 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 from datetime import datetime
 import os
+import logging
+
+# Import the Llama integration
+try:
+    from llama_integration import llama_integration
+    LLAMA_AVAILABLE = True
+except ImportError:
+    LLAMA_AVAILABLE = False
+    logging.warning("Llama integration not available - using fallback responses")
 
 app = Flask(__name__)
 CORS(app)
+
+# Set up logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 # Mock data for development
 mock_users = [
@@ -84,7 +97,8 @@ def home():
     return jsonify({
         "message": "LMU Campus LLM API",
         "version": "1.0.0",
-        "status": "running"
+        "status": "running",
+        "llama_available": LLAMA_AVAILABLE
     })
 
 # User endpoints
@@ -174,37 +188,89 @@ def claim_prize(prize_id):
     
     return jsonify({"success": True, "remainingPoints": user["points"]})
 
-# GenZ Buddy Chatbot endpoint
+# GenZ Buddy Chatbot endpoint with Llama integration
 @app.route('/api/genz-buddy', methods=['POST'])
 def genz_buddy():
-    data = request.get_json()
-    message = data.get('message', '').lower()
-    
-    # Mock responses for development
-    responses = {
-        "what's the best late-night food on campus": "Omg the Lair is literally the GOAT for late night munchies! 🍕 Their pizza hits different at 2am, and the fries are *chef's kiss*. Also, the Den has some fire chicken tenders if you're feeling that vibe. Pro tip: bring your student ID for the discount! 💅✨",
+    try:
+        data = request.get_json()
+        message = data.get('message', '')
+        conversation_history = data.get('conversation_history', [])
         
-        "how do i join greek life": "Yasss Greek life is where it's at! 🏛️ First, go to the Greek Life mixer this Friday (I'll send you the deets). Then check out rush week in the spring - it's like a whole vibe! Each house has their own personality, so go to as many events as you can. My friend Sarah just joined Alpha Phi and she's living her best life! DM me if you want the tea on specific houses 👀",
+        if not message:
+            return jsonify({"error": "Message is required"}), 400
         
-        "what's happening this weekend": "This weekend is gonna be LIT! 🔥 Friday we have the basketball game vs USC (wear your LMU gear!), Saturday is the Greek mixer in the Sunken Garden, and Sunday there's a study session at the library for finals prep. Plus, there's a campus spirit challenge going on - you can earn points and prizes! Are you going to any of these? I can give you the full tea ☕",
-        
-        "where's the best study spot": "The library is obviously the classic choice, but here's the real tea: 🫖 The 3rd floor of the library has the best views and is usually quieter. The Den has great vibes if you want background noise, and the new student center has these amazing pods that are perfect for group study sessions. My secret spot? The rooftop of the business building - it's so aesthetic and peaceful! 📚✨"
-    }
+        # Use Llama integration if available
+        if LLAMA_AVAILABLE:
+            logger.info(f"Generating Llama response for: {message[:50]}...")
+            result = llama_integration.generate_response(message, conversation_history)
+            
+            return jsonify({
+                "response": result['response'],
+                "model": result['model'],
+                "timestamp": result['timestamp'],
+                "success": result['success']
+            })
+        else:
+            # Fallback to mock responses
+            logger.info("Using fallback responses - Llama not available")
+            return _get_mock_response(message)
+            
+    except Exception as e:
+        logger.error(f"Error in genz-buddy endpoint: {str(e)}")
+        return jsonify({
+            "error": "Failed to generate response",
+            "message": str(e)
+        }), 500
+
+def _get_mock_response(message):
+    """Fallback mock responses when Llama is not available"""
+    message_lower = message.lower()
     
-    # Find matching response
-    response = None
-    for key, value in responses.items():
-        if key in message:
-            response = value
-            break
-    
-    if not response:
+    # Smart keyword matching for better responses
+    if any(word in message_lower for word in ['food', 'eat', 'hungry', 'lair', 'den', 'pizza']):
+        response = "Omg the Lair is literally the GOAT for late night munchies! 🍕 Their pizza hits different at 2am, and the fries are *chef's kiss*. Also, the Den has some fire chicken tenders if you're feeling that vibe. Pro tip: bring your student ID for the discount! 💅✨"
+    elif any(word in message_lower for word in ['greek', 'sorority', 'fraternity', 'rush', 'mixer']):
+        response = "Yasss Greek life is where it's at! 🏛️ First, go to the Greek Life mixer this Friday (I'll send you the deets). Then check out rush week in the spring - it's like a whole vibe! Each house has their own personality, so go to as many events as you can. My friend Sarah just joined Alpha Phi and she's living her best life! DM me if you want the tea on specific houses 👀"
+    elif any(word in message_lower for word in ['weekend', 'friday', 'saturday', 'sunday', 'tonight']):
+        response = "This weekend is gonna be LIT! 🔥 Friday we have the basketball game vs USC (wear your LMU gear!), Saturday is the Greek mixer in the Sunken Garden, and Sunday there's a study session at the library for finals prep. Plus, there's a campus spirit challenge going on - you can earn points and prizes! Are you going to any of these? I can give you the full tea ☕"
+    elif any(word in message_lower for word in ['study', 'library', 'quiet', 'homework', 'exam']):
+        response = "The library is obviously the classic choice, but here's the real tea: 🫖 The 3rd floor of the library has the best views and is usually quieter. The Den has great vibes if you want background noise, and the new student center has these amazing pods that are perfect for group study sessions. My secret spot? The rooftop of the business building - it's so aesthetic and peaceful! 📚✨"
+    else:
         response = "That's a great question! 🤔 Let me think... Honestly, I'm still learning about everything on campus, but I'd recommend checking out the student activities page or asking around! The LMU community is super helpful. What else can I help you with? 💫"
     
     return jsonify({
         "response": response,
-        "timestamp": datetime.now().isoformat()
+        "model": "fallback",
+        "timestamp": datetime.now().isoformat(),
+        "success": True
     })
+
+# Llama model status endpoint
+@app.route('/api/llama/status', methods=['GET'])
+def llama_status():
+    """Check the status of the Llama model integration"""
+    if not LLAMA_AVAILABLE:
+        return jsonify({
+            "available": False,
+            "status": "not_configured",
+            "message": "Llama integration module not available"
+        })
+    
+    try:
+        test_result = llama_integration.test_connection()
+        return jsonify({
+            "available": True,
+            "status": test_result['status'],
+            "model_endpoint": test_result['model_endpoint'],
+            "test_response": test_result.get('test_response', ''),
+            "error": test_result.get('error', None)
+        })
+    except Exception as e:
+        return jsonify({
+            "available": True,
+            "status": "error",
+            "error": str(e)
+        })
 
 # Leaderboard endpoint
 @app.route('/api/leaderboard', methods=['GET'])
