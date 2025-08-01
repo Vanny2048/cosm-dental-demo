@@ -3,6 +3,7 @@ from flask_cors import CORS
 from datetime import datetime
 import os
 import logging
+import re
 
 # Import the Llama integration
 try:
@@ -12,12 +13,28 @@ except ImportError:
     LLAMA_AVAILABLE = False
     logging.warning("Llama integration not available - using fallback responses")
 
+# Import database functions
+try:
+    from database import init_database, get_user_by_email, create_user, add_to_waitlist, get_waitlist_count
+    DATABASE_AVAILABLE = True
+except ImportError as e:
+    DATABASE_AVAILABLE = False
+    logging.warning(f"Database integration not available - using mock data: {str(e)}")
+
 app = Flask(__name__)
 CORS(app)
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+# Configuration
+app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev-secret-key-change-in-production')
+app.config['DEBUG'] = os.environ.get('FLASK_ENV') == 'development'
+
+# Initialize database
+if DATABASE_AVAILABLE:
+    init_database()
 
 # Mock data for development
 mock_users = [
@@ -293,6 +310,113 @@ def get_leaderboard():
     ]
     return jsonify(leaderboard)
 
+# Waitlist endpoints
+@app.route('/api/waitlist', methods=['POST'])
+def join_waitlist():
+    """Add user to waitlist"""
+    try:
+        data = request.get_json()
+        
+        # Validate required fields
+        required_fields = ['email', 'name', 'student_id']
+        for field in required_fields:
+            if not data.get(field):
+                return jsonify({"error": f"Missing required field: {field}"}), 400
+        
+        # Validate student ID format (8 digits)
+        if not re.match(r'^\d{8}$', data.get('student_id', '')):
+            return jsonify({"error": "Student ID must be 8 digits"}), 400
+        
+        # Check if already on waitlist
+        if DATABASE_AVAILABLE:
+            existing_user = get_user_by_email(data['email'])
+            if existing_user:
+                return jsonify({"error": "Email already registered"}), 409
+        
+        # Prepare waitlist data
+        waitlist_data = {
+            'email': data['email'],
+            'name': data['name'],
+            'student_id': data['student_id'],
+            'phone': data.get('phone', ''),
+            'graduation_year': data.get('graduation_year'),
+            'major': data.get('major', ''),
+            'interests': data.get('interests', []),
+            'referral_source': data.get('referral_source', 'website'),
+            'status': 'pending'
+        }
+        
+        # Add to database if available
+        if DATABASE_AVAILABLE:
+            result = add_to_waitlist(waitlist_data)
+            if result:
+                waitlist_count = get_waitlist_count()
+                return jsonify({
+                    "success": True,
+                    "message": "Successfully joined the waitlist!",
+                    "waitlist_position": waitlist_count,
+                    "user_id": result['id']
+                })
+            else:
+                return jsonify({"error": "Failed to add to waitlist"}), 500
+        else:
+            # Mock response
+            return jsonify({
+                "success": True,
+                "message": "Successfully joined the waitlist! (Mock)",
+                "waitlist_position": 42,
+                "user_id": 999
+            })
+            
+    except Exception as e:
+        logger.error(f"Error in waitlist endpoint: {str(e)}")
+        return jsonify({"error": "Failed to join waitlist"}), 500
+
+@app.route('/api/waitlist/count', methods=['GET'])
+def get_waitlist_count_endpoint():
+    """Get waitlist count"""
+    try:
+        if DATABASE_AVAILABLE:
+            count = get_waitlist_count()
+        else:
+            count = 42  # Mock count
+        
+        return jsonify({
+            "count": count,
+            "message": f"There are {count} people on the waitlist"
+        })
+    except Exception as e:
+        logger.error(f"Error getting waitlist count: {str(e)}")
+        return jsonify({"error": "Failed to get waitlist count"}), 500
+
+@app.route('/api/waitlist/status', methods=['GET'])
+def get_waitlist_status():
+    """Get waitlist status for a user"""
+    try:
+        email = request.args.get('email')
+        if not email:
+            return jsonify({"error": "Email parameter required"}), 400
+        
+        if DATABASE_AVAILABLE:
+            # This would check if user is on waitlist
+            # For now, return mock status
+            return jsonify({
+                "on_waitlist": True,
+                "position": 42,
+                "estimated_access": "2-3 weeks"
+            })
+        else:
+            return jsonify({
+                "on_waitlist": True,
+                "position": 42,
+                "estimated_access": "2-3 weeks (Mock)"
+            })
+            
+    except Exception as e:
+        logger.error(f"Error getting waitlist status: {str(e)}")
+        return jsonify({"error": "Failed to get waitlist status"}), 500
+
 if __name__ == '__main__':
-    port = int(os.environ.get('PORT', 5000))
-    app.run(debug=True, host='0.0.0.0', port=port)
+    port = int(os.environ.get('PORT', 8000))
+    debug = os.environ.get('FLASK_ENV') == 'development'
+    app.run(debug=debug, host='0.0.0.0', port=port)
