@@ -1,174 +1,197 @@
-# Lumina Smiles - Luxury Cosmetic Dentistry Website
+# LMU Campus LLM Web App 🦁
 
-A modern, premium cosmetic dental website for Lumina Smiles, featuring a luxury aesthetic with full contact form functionality and Netlify deployment.
+*A student-driven engagement, event, and spirit platform, powered by a fine-tuned GenZ Llama chatbot for real-time campus guidance and hype.*
 
-## 🌟 Features
+## 🌟 App Overview & Goals
 
-- **Luxury Design**: Clean, minimal aesthetic with soft gold/pearl gradients
-- **Responsive Layout**: Mobile-first design that works on all devices
-- **Interactive Elements**: Smooth animations, before/after sliders, and service toggles
-- **Contact Form**: Fully functional lead capture form with spam protection
-- **Netlify Integration**: Serverless functions for form processing and database storage
-- **SEO Optimized**: Proper meta tags and semantic HTML structure
+- **Gamify campus participation**: Leaderboards, points, badges, wild prizes
+- **Make it fun and social**: "FOMO engine" for tailgates, games, RSOs, and Greek life
+- **Centralize campus info**: Event calendars, check-ins, RSVPs, trending spirit challenges
+- **Unique twist**: AI-powered "LMU GenZ Buddy" for instant, student-voiced help and energy
+- **Fully mobile-first, on-brand, lightning-fast** — no more boring or clunky campus systems
 
-## 🚀 Quick Deploy to Netlify
+## 🚀 Core Features
 
-### Option 1: Deploy Button (Recommended)
-[![Deploy to Netlify](https://www.netlify.com/img/deploy/button.svg)](https://app.netlify.com/start/deploy?repository=https://github.com/yourusername/lumina-smiles)
+### Pages & Flows
+| Page | Key Actions & Features |
+|------|----------------------|
+| **Home** | Next Big Event banner, "You're ranked X", daily spirit challenge, live event preview, nav bar |
+| **Events** | Card/calendar view of all events, colored by type, 1-click RSVP, map, social "who's going" info |
+| **Game Day Zone** | Check-in (QR/geolocation), live spirit meter, challenge uploads (photo/vid), watch party map |
+| **Leaderboard** | Ranks for individuals/orgs, badge ribbons, animated movement, "How I Rank" modals |
+| **Prizes** | Grid of prizes (images, point values), claim & status, prize idea suggestions form |
+| **Profile** | Avatar/points/streaks, badge gallery, events attended, RSVP status, edit options |
+| **Host Zone** | Event submission form (title, type, date, image), status dashboard, quick preview |
+| **Buddy Chat** | Full-page, chat-style LMU Buddy; shortcut chat button floating on every page |
+| **Notifications** | RSVP reminders, leaderboard changes, claim prompts, custom settings for push messages |
 
-### Option 2: Manual Deployment
+## 🛠️ Tech Stack
 
-1. **Fork/Clone this repository**
-   ```bash
-   git clone https://github.com/yourusername/lumina-smiles.git
-   cd lumina-smiles
-   ```
+- **Frontend**: React.js with modern hooks and context
+- **Backend**: Python Flask REST API
+- **Database**: SQLite for development, PostgreSQL for production
+- **AI Integration**: Fine-tuned Llama model for GenZ Buddy chatbot
+- **Styling**: CSS3 with LMU brand colors (#8C1515 crimson, navy, gold accents)
+- **Deployment**: Netlify for frontend, Railway/Heroku for backend
 
-2. **Deploy to Netlify**
-   - Go to [Netlify](https://netlify.com)
-   - Click "New site from Git"
-   - Connect your GitHub account
-   - Select this repository
-   - Click "Deploy site"
+## 🎨 Brand Identity
 
-3. **Configure Environment Variables** (Optional - for database storage)
-   - In your Netlify dashboard, go to Site settings > Environment variables
-   - Add: `MONGODB_URI` = your MongoDB connection string
+- **Colors**: LMU Crimson (#8C1515), Navy (#1B365D), Gold (#D4AF37)
+- **Typography**: Montserrat for headings, Inter for body text
+- **Vibe**: High-energy, fun, social, inclusive, modern
 
-## 📋 Form Functionality
-
-The contact form includes:
-
-- **Spam Protection**: Honeypot field to prevent bot submissions
-- **Data Storage**: MongoDB integration via Netlify functions
-- **Validation**: Client-side and server-side validation
-- **Success/Error Handling**: User-friendly notifications
-- **Lead Management**: Structured data for CRM integration
-
-### Form Fields:
-- Full Name (required)
-- Email Address (required)
-- Phone Number (required)
-- Service Selection (required)
-- Message (optional)
-
-## 🛠️ Local Development
+## 📱 Quick Start
 
 ### Prerequisites
-- Node.js 18+ 
+- Node.js 18+
+- Python 3.8+
 - Git
 
-### Setup
+### Installation
+
 1. **Clone the repository**
    ```bash
-   git clone https://github.com/yourusername/lumina-smiles.git
-   cd lumina-smiles
+   git clone https://github.com/yourusername/campus-llm-lmu.git
+   cd campus-llm-lmu
    ```
 
-2. **Install Netlify CLI**
+2. **Install frontend dependencies**
    ```bash
-   npm install -g netlify-cli
-   ```
-
-3. **Install function dependencies**
-   ```bash
-   cd netlify/functions
+   cd frontend
    npm install
-   cd ../..
    ```
 
-4. **Start local development server**
+3. **Install backend dependencies**
    ```bash
-   netlify dev
+   cd ../backend
+   pip install -r requirements.txt
+   ```
+
+4. **Start development servers**
+   ```bash
+   # Terminal 1 - Backend
+   cd backend
+   python app.py
+   
+   # Terminal 2 - Frontend
+   cd frontend
+   npm start
    ```
 
 5. **Open your browser**
-   - Navigate to `http://localhost:8888`
+   - Frontend: `http://localhost:3000`
+   - Backend API: `http://localhost:5000`
 
-## 🗄️ Database Setup (Optional)
+## 🤖 LMU GenZ Buddy Integration
 
-For full lead storage functionality:
+The app features a fine-tuned Llama chatbot that:
+- Answers questions in GenZ style about LMU life
+- Provides event recommendations and campus tips
+- Maintains positive, energetic tone
+- Never reveals it's AI
+- Available via floating button on every page
 
-1. **Create MongoDB Atlas account**
-   - Go to [MongoDB Atlas](https://www.mongodb.com/atlas)
-   - Create a free cluster
+### Chatbot Features
+- **Floating "Ask Buddy 🦁" button** on every page
+- **Full chat page** with conversation history
+- **Response rating** (thumbs up/down)
+- **GenZ prompt suggestions** for quick questions
+- **Safety filters** for inappropriate content
 
-2. **Get connection string**
-   - In your cluster, click "Connect"
-   - Choose "Connect your application"
-   - Copy the connection string
+## 🎯 Development Roadmap
 
-3. **Set environment variable**
-   - In Netlify dashboard: Site settings > Environment variables
-   - Add: `MONGODB_URI` = `mongodb+srv://username:password@cluster.mongodb.net/lumina-smiles?retryWrites=true&w=majority`
+### Phase 1: Core UI & Navigation ✅
+- [x] Project structure setup
+- [x] LMU branding and design system
+- [x] Responsive navigation
+- [x] Page routing and layout
 
-## 📱 Customization
+### Phase 2: Static Pages & Mockups
+- [ ] Home page with event banner and leaderboard preview
+- [ ] Events page with card/calendar view
+- [ ] Game Day Zone with check-in interface
+- [ ] Leaderboard with animated rankings
+- [ ] Prizes showcase
+- [ ] User profile page
+- [ ] Host Zone for event submission
 
-### Colors & Branding
-Edit `styles.css` to customize:
-- Primary gold color: `#d4af37`
-- Secondary colors in gradients
-- Typography fonts (Playfair Display + Inter)
+### Phase 3: Backend API
+- [ ] User authentication system
+- [ ] Event management endpoints
+- [ ] Points and leaderboard logic
+- [ ] Prize claiming system
+- [ ] Check-in and RSVP functionality
 
-### Content Updates
-- **Images**: Replace Unsplash URLs with your own images
-- **Text**: Update all content in `index.html`
-- **Services**: Modify service cards and pricing
-- **Contact Info**: Update address, phone, email
+### Phase 4: Chatbot Integration
+- [ ] Llama model deployment
+- [ ] Chatbot UI components
+- [ ] API integration for chat responses
+- [ ] Safety and filtering layers
 
-### Form Integration
-The form is ready for:
-- **Twilio**: SMS notifications
-- **ManyChat**: Chatbot integration
-- **CRM Systems**: HubSpot, Salesforce, etc.
-- **Email Marketing**: Mailchimp, ConvertKit, etc.
+### Phase 5: Advanced Features
+- [ ] Real-time notifications
+- [ ] Photo/video challenge uploads
+- [ ] Geolocation check-ins
+- [ ] Social features and sharing
 
-## 🔧 Technical Details
+## 📊 Database Schema
 
-### File Structure
+### Users
+- id, email, name, avatar, points, streak, orgs, badges
+
+### Events
+- id, title, type, date, location, image, host, attendees, max_capacity
+
+### CheckIns
+- id, user_id, event_id, timestamp, location, points_earned
+
+### Prizes
+- id, name, description, image, point_cost, claimed_by, status
+
+### ChatHistory
+- id, user_id, message, response, timestamp, rating
+
+## 🔧 Configuration
+
+### Environment Variables
+```bash
+# Backend
+FLASK_ENV=development
+SECRET_KEY=your-secret-key
+DATABASE_URL=sqlite:///lmu_campus.db
+
+# Frontend
+REACT_APP_API_URL=http://localhost:5000
+REACT_APP_CHATBOT_URL=http://localhost:5000/api/genz-buddy
 ```
-lumina-smiles/
-├── index.html          # Main website
-├── styles.css          # All styling
-├── script.js           # JavaScript functionality
-├── netlify.toml        # Netlify configuration
-├── netlify/
-│   └── functions/
-│       ├── submit-form.js    # Form processing
-│       └── package.json      # Function dependencies
-└── README.md           # This file
-```
 
-### Technologies Used
-- **HTML5**: Semantic markup
-- **CSS3**: Modern styling with gradients and animations
-- **JavaScript**: Interactive functionality
-- **Netlify Functions**: Serverless backend
-- **MongoDB**: Database storage (optional)
-- **Font Awesome**: Icons
-- **Google Fonts**: Typography
+## 🚀 Deployment
 
-## 📊 Analytics & Tracking
+### Frontend (Netlify)
+1. Connect GitHub repository to Netlify
+2. Set build command: `npm run build`
+3. Set publish directory: `build`
+4. Configure environment variables
 
-Ready for integration with:
-- Google Analytics
-- Facebook Pixel
-- LinkedIn Insight Tag
-- Hotjar
-- Google Tag Manager
+### Backend (Railway/Heroku)
+1. Deploy Python Flask app
+2. Set environment variables
+3. Configure database connection
+4. Deploy Llama model endpoint
 
-## 🔒 Security Features
+## 🤝 Contributing
 
-- **Honeypot Protection**: Hidden field to catch bots
-- **Input Validation**: Client and server-side validation
-- **CORS Headers**: Proper cross-origin handling
-- **HTTPS**: Automatic SSL with Netlify
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
 
 ## 📞 Support
 
-For questions or customization requests:
-- Email: hello@luminasmiles.com
-- Phone: (310) 555-0123
+For questions or collaboration:
+- Email: lmu-campus-llm@lmu.edu
+- Discord: [LMU Campus LLM Community]
 
 ## 📄 License
 
@@ -176,4 +199,5 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 ---
 
-**Built with ❤️ for Lumina Smiles**
+**Built with ❤️ for LMU Lions 🦁**
+*Making campus life more engaging, social, and spirited through AI-powered student engagement.*
