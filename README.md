@@ -1,179 +1,447 @@
-# Lumina Smiles - Luxury Cosmetic Dentistry Website
+# 🦁 LMU Campus LLM - Complete Student Engagement Platform
 
-A modern, premium cosmetic dental website for Lumina Smiles, featuring a luxury aesthetic with full contact form functionality and Netlify deployment.
+*A comprehensive, AI-powered student engagement platform for LMU, featuring gamified campus participation, real-time events, and a GenZ chatbot assistant.*
 
-## 🌟 Features
+## 🌟 **Project Overview**
 
-- **Luxury Design**: Clean, minimal aesthetic with soft gold/pearl gradients
-- **Responsive Layout**: Mobile-first design that works on all devices
-- **Interactive Elements**: Smooth animations, before/after sliders, and service toggles
-- **Contact Form**: Fully functional lead capture form with spam protection
-- **Netlify Integration**: Serverless functions for form processing and database storage
-- **SEO Optimized**: Proper meta tags and semantic HTML structure
+LMU Campus LLM is a full-stack web application designed to revolutionize campus engagement at Loyola Marymount University. It combines modern web technologies with AI to create an engaging, social platform that encourages student participation in campus life.
 
-## 🚀 Quick Deploy to Netlify
+### **Key Features**
+- 🎮 **Gamified Engagement** - Points, leaderboards, and badges
+- 🤖 **AI Chatbot** - GenZ-style campus assistant
+- 📅 **Event Management** - RSVP, check-ins, and real-time updates
+- 📱 **Mobile-First Design** - Optimized for all devices
+- 🗄️ **Database Storage** - Supabase integration for all data
+- 📝 **Waitlist System** - Collect student signups with detailed information
 
-### Option 1: Deploy Button (Recommended)
-[![Deploy to Netlify](https://www.netlify.com/img/deploy/button.svg)](https://app.netlify.com/start/deploy?repository=https://github.com/yourusername/lumina-smiles)
+## 🏗️ **Architecture Overview**
 
-### Option 2: Manual Deployment
+### **Frontend (React.js)**
+- **Framework**: React 18 with modern hooks
+- **Styling**: Tailwind CSS with custom LMU branding
+- **State Management**: React Context API
+- **Animations**: Framer Motion
+- **Deployment**: Netlify (free tier)
 
-1. **Fork/Clone this repository**
-   ```bash
-   git clone https://github.com/yourusername/lumina-smiles.git
-   cd lumina-smiles
-   ```
+### **Backend (Flask)**
+- **Framework**: Python Flask with REST API
+- **Database**: Supabase (PostgreSQL)
+- **Authentication**: Ready for LMU SSO integration
+- **Deployment**: Railway (free tier)
 
-2. **Deploy to Netlify**
-   - Go to [Netlify](https://netlify.com)
-   - Click "New site from Git"
-   - Connect your GitHub account
-   - Select this repository
-   - Click "Deploy site"
+### **Database (Supabase)**
+- **Tables**: Users, Events, Check-ins, Waitlist, Prizes, Chat History
+- **Real-time**: Live updates and notifications
+- **Security**: Row Level Security (RLS)
+- **Analytics**: Built-in dashboard and queries
 
-3. **Configure Environment Variables** (Optional - for database storage)
-   - In your Netlify dashboard, go to Site settings > Environment variables
-   - Add: `MONGODB_URI` = your MongoDB connection string
+## 🚀 **Quick Start**
 
-## 📋 Form Functionality
-
-The contact form includes:
-
-- **Spam Protection**: Honeypot field to prevent bot submissions
-- **Data Storage**: MongoDB integration via Netlify functions
-- **Validation**: Client-side and server-side validation
-- **Success/Error Handling**: User-friendly notifications
-- **Lead Management**: Structured data for CRM integration
-
-### Form Fields:
-- Full Name (required)
-- Email Address (required)
-- Phone Number (required)
-- Service Selection (required)
-- Message (optional)
-
-## 🛠️ Local Development
-
-### Prerequisites
-- Node.js 18+ 
+### **Prerequisites**
+- Node.js 18+
+- Python 3.8+
 - Git
+- Supabase account (free)
 
-### Setup
+### **Local Development**
+
 1. **Clone the repository**
    ```bash
-   git clone https://github.com/yourusername/lumina-smiles.git
-   cd lumina-smiles
+   git clone https://github.com/yourusername/lmu-campus-llm.git
+   cd lmu-campus-llm
    ```
 
-2. **Install Netlify CLI**
+2. **Backend Setup**
    ```bash
-   npm install -g netlify-cli
+   cd backend
+   python3 -m venv venv
+   source venv/bin/activate  # On Windows: venv\Scripts\activate
+   pip install -r requirements.txt
    ```
 
-3. **Install function dependencies**
+3. **Frontend Setup**
    ```bash
-   cd netlify/functions
+   cd frontend
    npm install
-   cd ../..
    ```
 
-4. **Start local development server**
+4. **Environment Configuration**
    ```bash
-   netlify dev
+   # Backend (.env file)
+   FLASK_ENV=development
+   SECRET_KEY=your-dev-secret-key
+   SUPABASE_URL=https://mxmgrsofnrnmykwrrsfq.supabase.co
+   SUPABASE_ANON_KEY=your-supabase-anon-key
+   
+   # Frontend (.env file)
+   REACT_APP_API_URL=http://localhost:8000
    ```
 
-5. **Open your browser**
-   - Navigate to `http://localhost:8888`
+5. **Start Development Servers**
+   ```bash
+   # Terminal 1 - Backend
+   cd backend
+   source venv/bin/activate
+   python app.py
+   
+   # Terminal 2 - Frontend
+   cd frontend
+   npm start
+   ```
 
-## 🗄️ Database Setup (Optional)
+6. **Access the Application**
+   - Frontend: http://localhost:3000
+   - Backend API: http://localhost:8000
+   - API Documentation: http://localhost:8000/
 
-For full lead storage functionality:
+## 📁 **Project Structure**
 
-1. **Create MongoDB Atlas account**
-   - Go to [MongoDB Atlas](https://www.mongodb.com/atlas)
-   - Create a free cluster
-
-2. **Get connection string**
-   - In your cluster, click "Connect"
-   - Choose "Connect your application"
-   - Copy the connection string
-
-3. **Set environment variable**
-   - In Netlify dashboard: Site settings > Environment variables
-   - Add: `MONGODB_URI` = `mongodb+srv://username:password@cluster.mongodb.net/lumina-smiles?retryWrites=true&w=majority`
-
-## 📱 Customization
-
-### Colors & Branding
-Edit `styles.css` to customize:
-- Primary gold color: `#d4af37`
-- Secondary colors in gradients
-- Typography fonts (Playfair Display + Inter)
-
-### Content Updates
-- **Images**: Replace Unsplash URLs with your own images
-- **Text**: Update all content in `index.html`
-- **Services**: Modify service cards and pricing
-- **Contact Info**: Update address, phone, email
-
-### Form Integration
-The form is ready for:
-- **Twilio**: SMS notifications
-- **ManyChat**: Chatbot integration
-- **CRM Systems**: HubSpot, Salesforce, etc.
-- **Email Marketing**: Mailchimp, ConvertKit, etc.
-
-## 🔧 Technical Details
-
-### File Structure
 ```
-lumina-smiles/
-├── index.html          # Main website
-├── styles.css          # All styling
-├── script.js           # JavaScript functionality
-├── netlify.toml        # Netlify configuration
-├── netlify/
-│   └── functions/
-│       ├── submit-form.js    # Form processing
-│       └── package.json      # Function dependencies
-└── README.md           # This file
+lmu-campus-llm/
+├── frontend/                    # React application
+│   ├── public/                 # Static assets
+│   ├── src/
+│   │   ├── components/         # Reusable UI components
+│   │   │   ├── Navigation.js   # Main navigation
+│   │   │   ├── BuddyChat.js    # AI chatbot interface
+│   │   │   ├── WaitlistSignup.js # Waitlist signup modal
+│   │   │   └── ...
+│   │   ├── pages/              # Page components
+│   │   │   ├── Home.js         # Landing page
+│   │   │   ├── Events.js       # Events listing
+│   │   │   ├── GameDayZone.js  # Check-in system
+│   │   │   ├── Leaderboard.js  # Rankings
+│   │   │   ├── Prizes.js       # Point redemption
+│   │   │   ├── Profile.js      # User profile
+│   │   │   ├── HostZone.js     # Event creation
+│   │   │   └── Notifications.js # Notifications
+│   │   ├── context/            # State management
+│   │   │   └── UserContext.js  # User state
+│   │   ├── styles/             # CSS files
+│   │   └── App.js              # Main app component
+│   ├── package.json            # Dependencies
+│   └── build/                  # Production build
+├── backend/                    # Flask API
+│   ├── app.py                 # Main Flask application
+│   ├── database.py            # Supabase integration
+│   ├── llama_integration.py   # AI model integration
+│   ├── requirements.txt       # Python dependencies
+│   ├── Procfile              # Railway deployment
+│   ├── runtime.txt           # Python version
+│   └── .env.example          # Environment template
+├── netlify/                   # Netlify functions
+├── docs/                      # Documentation
+├── SUPABASE_SETUP.md         # Database setup guide
+├── DEPLOYMENT_GUIDE.md       # Deployment instructions
+└── README.md                 # This file
 ```
 
-### Technologies Used
-- **HTML5**: Semantic markup
-- **CSS3**: Modern styling with gradients and animations
-- **JavaScript**: Interactive functionality
-- **Netlify Functions**: Serverless backend
-- **MongoDB**: Database storage (optional)
-- **Font Awesome**: Icons
-- **Google Fonts**: Typography
+## 🎨 **Features & Pages**
 
-## 📊 Analytics & Tracking
+### **🏠 Home Page**
+- Welcome banner with user stats
+- Next big event preview
+- Daily spirit challenge
+- Quick action buttons
+- Live event feed
 
-Ready for integration with:
-- Google Analytics
-- Facebook Pixel
-- LinkedIn Insight Tag
-- Hotjar
-- Google Tag Manager
+### **📅 Events**
+- Card and calendar view
+- Event categories (Game Day, Social, Academic, etc.)
+- RSVP functionality
+- Location mapping
+- Social "who's going" info
 
-## 🔒 Security Features
+### **🏈 Game Day Zone**
+- QR code check-in
+- Geolocation verification
+- Live spirit meter
+- Photo/video challenge uploads
+- Watch party map
 
-- **Honeypot Protection**: Hidden field to catch bots
-- **Input Validation**: Client and server-side validation
-- **CORS Headers**: Proper cross-origin handling
-- **HTTPS**: Automatic SSL with Netlify
+### **🏆 Leaderboard**
+- Individual and organization rankings
+- Badge ribbons and achievements
+- Animated position changes
+- "How I Rank" modals
+- Weekly/monthly competitions
 
-## 📞 Support
+### **🎁 Prizes**
+- Point redemption system
+- LMU merchandise catalog
+- Game day tickets
+- Exclusive experiences
+- Claim status tracking
 
-For questions or customization requests:
-- Email: hello@luminasmiles.com
-- Phone: (310) 555-0123
+### **👤 Profile**
+- Personal stats dashboard
+- Badge gallery
+- Event history
+- Achievement timeline
+- Settings and preferences
 
-## 📄 License
+### **🎪 Host Zone**
+- Event creation form
+- Host dashboard
+- Attendance tracking
+- Event analytics
+- Quick preview mode
+
+### **🤖 GenZ Buddy Chatbot**
+- Floating chat button
+- Full conversation interface
+- GenZ-style responses
+- Quick question suggestions
+- Response rating system
+
+### **📝 Waitlist System**
+- Beautiful signup modal
+- Student ID collection
+- Comprehensive data gathering
+- Interest tracking
+- Graduation year tracking
+
+## 🗄️ **Database Schema**
+
+### **Users Table**
+```sql
+CREATE TABLE users (
+    id SERIAL PRIMARY KEY,
+    email VARCHAR(255) UNIQUE NOT NULL,
+    name VARCHAR(255) NOT NULL,
+    student_id VARCHAR(20) UNIQUE,
+    avatar TEXT,
+    points INTEGER DEFAULT 0,
+    rank INTEGER DEFAULT 0,
+    streak INTEGER DEFAULT 0,
+    graduation_year INTEGER,
+    major VARCHAR(100),
+    organizations TEXT[],
+    created_at TIMESTAMP DEFAULT NOW()
+);
+```
+
+### **Waitlist Table**
+```sql
+CREATE TABLE waitlist (
+    id SERIAL PRIMARY KEY,
+    email VARCHAR(255) UNIQUE NOT NULL,
+    name VARCHAR(255) NOT NULL,
+    student_id VARCHAR(20) UNIQUE,
+    phone VARCHAR(20),
+    graduation_year INTEGER,
+    major VARCHAR(100),
+    interests TEXT[],
+    referral_source VARCHAR(100),
+    created_at TIMESTAMP DEFAULT NOW(),
+    status VARCHAR(20) DEFAULT 'pending'
+);
+```
+
+### **Events Table**
+```sql
+CREATE TABLE events (
+    id SERIAL PRIMARY KEY,
+    title VARCHAR(255) NOT NULL,
+    type VARCHAR(50) NOT NULL,
+    date TIMESTAMP NOT NULL,
+    location VARCHAR(255),
+    image TEXT,
+    host VARCHAR(255),
+    description TEXT,
+    max_capacity INTEGER,
+    points INTEGER DEFAULT 0,
+    tags TEXT[],
+    created_at TIMESTAMP DEFAULT NOW()
+);
+```
+
+### **Check-ins Table**
+```sql
+CREATE TABLE check_ins (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER REFERENCES users(id),
+    event_id INTEGER REFERENCES events(id),
+    timestamp TIMESTAMP DEFAULT NOW(),
+    points_earned INTEGER DEFAULT 0,
+    location_lat DECIMAL(10,8),
+    location_lng DECIMAL(11,8)
+);
+```
+
+## 🔧 **API Endpoints**
+
+### **Authentication**
+- `POST /api/auth/login` - User login
+- `POST /api/auth/register` - User registration
+- `GET /api/auth/profile` - Get user profile
+
+### **Users**
+- `GET /api/users/<id>` - Get user by ID
+- `PUT /api/users/<id>` - Update user
+- `POST /api/users/<id>/points` - Add points
+
+### **Events**
+- `GET /api/events` - List all events
+- `GET /api/events/<id>` - Get event details
+- `POST /api/events/<id>/rsvp` - RSVP to event
+- `POST /api/events/<id>/checkin` - Check in to event
+
+### **Waitlist**
+- `POST /api/waitlist` - Join waitlist
+- `GET /api/waitlist/count` - Get waitlist count
+- `GET /api/waitlist/status` - Check waitlist status
+
+### **Leaderboard**
+- `GET /api/leaderboard` - Get rankings
+- `GET /api/leaderboard/organizations` - Org rankings
+
+### **Prizes**
+- `GET /api/prizes` - List available prizes
+- `POST /api/prizes/<id>/claim` - Claim prize
+
+### **Chatbot**
+- `POST /api/genz-buddy` - Chat with AI assistant
+- `GET /api/llama/status` - Check AI model status
+
+## 🎨 **Design System**
+
+### **Colors**
+- **LMU Crimson**: `#8C1515`
+- **Navy**: `#1B365D`
+- **Gold**: `#D4AF37`
+- **Light Gray**: `#F8F9FA`
+- **Dark Gray**: `#343A40`
+
+### **Typography**
+- **Headings**: Montserrat (Bold)
+- **Body**: Inter (Regular)
+- **Code**: JetBrains Mono
+
+### **Components**
+- **Cards**: Rounded corners, subtle shadows
+- **Buttons**: Gradient backgrounds, hover effects
+- **Forms**: Clean inputs, validation states
+- **Navigation**: Bottom nav on mobile, top nav on desktop
+
+## 🚀 **Deployment**
+
+### **Backend (Railway)**
+1. Connect GitHub repository
+2. Set root directory to `backend`
+3. Add environment variables
+4. Deploy automatically
+
+### **Frontend (Netlify)**
+1. Connect GitHub repository
+2. Set base directory to `frontend`
+3. Set build command: `npm run build`
+4. Set publish directory: `build`
+
+### **Database (Supabase)**
+1. Create new project
+2. Run SQL schema
+3. Configure RLS policies
+4. Add environment variables
+
+## 🧪 **Testing**
+
+### **Backend Tests**
+```bash
+# Test API endpoints
+curl http://localhost:8000/
+curl http://localhost:8000/api/events
+curl -X POST http://localhost:8000/api/waitlist \
+  -H "Content-Type: application/json" \
+  -d '{"name": "Test User", "email": "test@lmu.edu", "student_id": "12345678"}'
+```
+
+### **Frontend Tests**
+- ✅ All pages load correctly
+- ✅ Navigation works on mobile/desktop
+- ✅ Waitlist form validation
+- ✅ Chatbot responds
+- ✅ Responsive design
+
+### **Database Tests**
+- ✅ Waitlist signups save correctly
+- ✅ User data persists
+- ✅ Event data accessible
+- ✅ Analytics queries work
+
+## 📊 **Analytics & Monitoring**
+
+### **Waitlist Analytics**
+- Daily signup trends
+- Interest breakdown
+- Graduation year distribution
+- Referral source tracking
+
+### **User Engagement**
+- Event attendance rates
+- Points earned distribution
+- Leaderboard participation
+- Chatbot usage patterns
+
+### **Performance Metrics**
+- Page load times
+- API response times
+- Error rates
+- User retention
+
+## 🔒 **Security**
+
+### **Data Protection**
+- Environment variables for secrets
+- CORS configuration
+- Input validation
+- SQL injection prevention
+
+### **Authentication**
+- JWT tokens
+- Password hashing
+- Session management
+- Rate limiting
+
+### **Database Security**
+- Row Level Security (RLS)
+- Prepared statements
+- Connection encryption
+- Backup procedures
+
+## 🤝 **Contributing**
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Add tests
+5. Submit a pull request
+
+## 📞 **Support**
+
+- **Documentation**: Check the `/docs` folder
+- **Issues**: GitHub Issues
+- **Email**: lmu-campus-llm@lmu.edu
+- **Discord**: LMU Campus LLM Community
+
+## 📄 **License**
 
 This project is licensed under the MIT License - see the LICENSE file for details.
 
+## 🎉 **Acknowledgments**
+
+- **LMU Students** - For inspiration and feedback
+- **Supabase** - For the amazing database platform
+- **React & Flask Communities** - For excellent documentation
+- **LMU Administration** - For supporting student innovation
+
 ---
 
-**Built with ❤️ for Lumina Smiles**
+**Built with ❤️ for LMU Lions 🦁**
+
+*Making campus life more engaging, social, and spirited through AI-powered student engagement.*
+
+**Version**: 1.0.0  
+**Last Updated**: August 2024  
+**Status**: Production Ready  
+**Cost**: 100% Free
