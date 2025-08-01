@@ -1,0 +1,21 @@
+nohup: ignoring input
+ * Serving Flask app 'app'
+ * Debug mode: on
+INFO:werkzeug:[31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:5000
+ * Running on http://172.30.0.2:5000
+INFO:werkzeug:[33mPress CTRL+C to quit[0m
+INFO:werkzeug: * Restarting with stat
+WARNING:werkzeug: * Debugger is active!
+INFO:werkzeug: * Debugger PIN: 140-273-683
+INFO:werkzeug:127.0.0.1 - - [01/Aug/2025 08:15:42] "GET / HTTP/1.1" 200 -
+INFO:__main__:Generating Llama response for: whats the best food on campus?...
+ERROR:llama_integration:Error generating Llama response: HTTPConnectionPool(host='localhost', port=8000): Max retries exceeded with url: /generate (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7fb1baac4050>: Failed to establish a new connection: [Errno 111] Connection refused'))
+INFO:werkzeug:127.0.0.1 - - [01/Aug/2025 08:15:44] "POST /api/genz-buddy HTTP/1.1" 200 -
+INFO:__main__:Generating Llama response for: how do i join greek life?...
+ERROR:llama_integration:Error generating Llama response: HTTPConnectionPool(host='localhost', port=8000): Max retries exceeded with url: /generate (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7fb1baab5950>: Failed to establish a new connection: [Errno 111] Connection refused'))
+INFO:werkzeug:127.0.0.1 - - [01/Aug/2025 08:15:46] "POST /api/genz-buddy HTTP/1.1" 200 -
+INFO:__main__:Generating Llama response for: where should i study?...
+ERROR:llama_integration:Error generating Llama response: HTTPConnectionPool(host='localhost', port=8000): Max retries exceeded with url: /generate (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7fb1baab6710>: Failed to establish a new connection: [Errno 111] Connection refused'))
+INFO:werkzeug:127.0.0.1 - - [01/Aug/2025 08:15:48] "POST /api/genz-buddy HTTP/1.1" 200 -

@@ -14,10 +14,10 @@ const BuddyChat = () => {
 
   // GenZ prompt suggestions
   const promptSuggestions = [
-    "What's the best late-night food on campus?",
-    "How do I join Greek life?",
-    "What's happening this weekend?",
-    "Where's the best study spot?"
+    "what's the best late night food on campus?",
+    "how do i join greek life?",
+    "what's happening this weekend?",
+    "where's the best study spot?"
   ];
 
   const scrollToBottom = () => {
@@ -40,7 +40,7 @@ const BuddyChat = () => {
         {
           id: 1,
           type: 'bot',
-          content: `Hey ${user?.name || 'Lion'}! 🦁 I'm your LMU GenZ Buddy - your go-to for all things campus life! Ask me anything about events, food, study spots, Greek life, or just general LMU vibes. I'm here to help you live your best college life! ✨`,
+          content: `hey ${user?.name || 'lion'}! 🦁 i'm your LMU buddy - your go-to for all things campus life! ask me anything about events, food, study spots, greek life, or just general LMU vibes. i'm here to help you live your best college life fr ✨`,
           timestamp: new Date(),
           model: modelStatus?.available ? 'llama-genz-buddy' : 'fallback'
         }
@@ -161,7 +161,7 @@ const BuddyChat = () => {
         transition={{ delay: 1, type: "spring", stiffness: 260, damping: 20 }}
       >
         <span className="buddy-icon">🦁</span>
-        <span className="buddy-text">Ask Buddy</span>
+        <span className="buddy-text">ask buddy</span>
         {modelStatus?.available && (
           <span className="model-indicator" title="Llama model connected">✨</span>
         )}
@@ -190,13 +190,13 @@ const BuddyChat = () => {
                   <span className="avatar-icon">🦁</span>
                 </div>
                 <div className="chat-info">
-                  <h3 className="chat-title">LMU GenZ Buddy</h3>
+                  <h3 className="chat-title">LMU buddy</h3>
                   <p className="chat-subtitle">
-                    Your campus bestie ✨
+                    your campus bestie ✨
                     {modelStatus?.available ? (
-                      <span className="model-status connected"> • Llama Powered</span>
+                      <span className="model-status connected"> • llama powered</span>
                     ) : (
-                      <span className="model-status fallback"> • Fallback Mode</span>
+                      <span className="model-status fallback"> • fallback mode</span>
                     )}
                   </p>
                 </div>
@@ -259,7 +259,7 @@ const BuddyChat = () => {
               {/* Prompt Suggestions */}
               {messages.length === 1 && (
                 <div className="prompt-suggestions">
-                  <p className="suggestions-title">Try asking me:</p>
+                  <p className="suggestions-title">try asking me:</p>
                   <div className="suggestions-grid">
                     {promptSuggestions.map((suggestion, index) => (
                       <button
@@ -279,7 +279,7 @@ const BuddyChat = () => {
                 <input
                   type="text"
                   className="chat-input"
-                  placeholder="Ask me anything about LMU life..."
+                  placeholder="ask me anything about LMU life..."
                   value={inputValue}
                   onChange={(e) => setInputValue(e.target.value)}
                   disabled={isLoading}

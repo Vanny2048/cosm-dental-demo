@@ -226,17 +226,25 @@ def _get_mock_response(message):
     """Fallback mock responses when Llama is not available"""
     message_lower = message.lower()
     
-    # Smart keyword matching for better responses
-    if any(word in message_lower for word in ['food', 'eat', 'hungry', 'lair', 'den', 'pizza']):
-        response = "Omg the Lair is literally the GOAT for late night munchies! 🍕 Their pizza hits different at 2am, and the fries are *chef's kiss*. Also, the Den has some fire chicken tenders if you're feeling that vibe. Pro tip: bring your student ID for the discount! 💅✨"
+    # Smart keyword matching for better responses with authentic GenZ voice
+    if any(word in message_lower for word in ['food', 'eat', 'hungry', 'lair', 'den', 'pizza', 'cstore', 'c-store']):
+        response = "The Lair pizza hits different at 2am fr 🍕 fries are *chef's kiss* too. Den has fire chicken tenders if you're feeling that vibe. Pro tip: bring your student ID for the discount!"
     elif any(word in message_lower for word in ['greek', 'sorority', 'fraternity', 'rush', 'mixer']):
-        response = "Yasss Greek life is where it's at! 🏛️ First, go to the Greek Life mixer this Friday (I'll send you the deets). Then check out rush week in the spring - it's like a whole vibe! Each house has their own personality, so go to as many events as you can. My friend Sarah just joined Alpha Phi and she's living her best life! DM me if you want the tea on specific houses 👀"
+        response = "Greek life mixer this Friday at the Sunken Garden, should be lit 🔥 rush week in the spring is a whole vibe. each house has their own personality fr. my friend Sarah just joined Alpha Phi and she's living her best life. dm me if you want the tea on specific houses 👀"
     elif any(word in message_lower for word in ['weekend', 'friday', 'saturday', 'sunday', 'tonight']):
-        response = "This weekend is gonna be LIT! 🔥 Friday we have the basketball game vs USC (wear your LMU gear!), Saturday is the Greek mixer in the Sunken Garden, and Sunday there's a study session at the library for finals prep. Plus, there's a campus spirit challenge going on - you can earn points and prizes! Are you going to any of these? I can give you the full tea ☕"
-    elif any(word in message_lower for word in ['study', 'library', 'quiet', 'homework', 'exam']):
-        response = "The library is obviously the classic choice, but here's the real tea: 🫖 The 3rd floor of the library has the best views and is usually quieter. The Den has great vibes if you want background noise, and the new student center has these amazing pods that are perfect for group study sessions. My secret spot? The rooftop of the business building - it's so aesthetic and peaceful! 📚✨"
+        response = "This weekend gonna be LIT! 🔥 Friday basketball game vs USC (wear your LMU gear!), Saturday Greek mixer at the Sunken Garden, Sunday study session at the library for finals prep. plus there's a campus spirit challenge going on - you can earn points and prizes! you going to any of these?"
+    elif any(word in message_lower for word in ['study', 'library', 'quiet', 'homework', 'exam', 'uhall', 'u-hall']):
+        response = "U-Hall 3rd floor has the best views and is usually quieter. Den has great vibes if you want background noise, new student center has these amazing pods perfect for group study sessions. my secret spot? rooftop of the business building - so aesthetic and peaceful! 📚"
+    elif any(word in message_lower for word in ['event', 'party', 'game', 'basketball', 'gersten']):
+        response = "Check the Events tab in the app! always something going on - basketball games, Greek mixers, study sessions. plus you can earn points for attending events and climb the leaderboard! what kind of vibe you looking for? 🎉"
+    elif any(word in message_lower for word in ['point', 'score', 'rank', 'leaderboard']):
+        response = "You can earn points by attending events, completing daily challenges, checking in at game days, and participating in campus activities! more you engage, more points you get. use them to claim prizes like LMU merch and game tickets! 🏆"
+    elif any(word in message_lower for word in ['basketball', 'gersten', 'game']):
+        response = "Basketball games at Gersten are LIT! 🦁🔥 wear your LMU gear, the energy is unmatched. student section goes crazy fr. check the schedule on the athletics site or ASLMU Insta"
+    elif any(word in message_lower for word in ['library', 'hannon', 'study']):
+        response = "William H. Hannon Library is the classic choice, but here's the real tea: 🫖 3rd floor has the best views and is usually quieter. Den has great vibes if you want background noise, and the new student center has these amazing pods that are perfect for group study sessions. my secret spot? rooftop of the business building - so aesthetic and peaceful! 📚"
     else:
-        response = "That's a great question! 🤔 Let me think... Honestly, I'm still learning about everything on campus, but I'd recommend checking out the student activities page or asking around! The LMU community is super helpful. What else can I help you with? 💫"
+        response = "That's a great question! 🤔 honestly, I'm still learning about everything on campus, but I'd recommend checking the student activities page or asking around! LMU community is super helpful fr. what else can I help you with? 💫"
     
     return jsonify({
         "response": response,

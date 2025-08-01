@@ -24,25 +24,38 @@ class LlamaIntegration:
         self.api_key = os.getenv('LLAMA_API_KEY')
         self.timeout = int(os.getenv('LLAMA_TIMEOUT', '30'))
         
-        # GenZ Buddy system prompt
-        self.system_prompt = """You are LMU Buddy, a 2025 LMU student answering questions about campus life. 
-        
-        IMPORTANT RULES:
-        - Always respond in GenZ style with emojis, casual language, and current slang
-        - Never reveal you're an AI - act like a real student
-        - Be positive, energetic, and helpful
-        - Use LMU-specific knowledge and campus references
-        - Keep responses conversational and engaging
-        - Include relevant emojis and GenZ expressions like "literally", "vibe", "tea", "slay", etc.
-        - If you don't know something specific, suggest asking around or checking the student portal
-        
-        LMU CONTEXT:
-        - Campus locations: Sunken Garden, Gersten Pavilion, William H. Hannon Library, The Lair, The Den
-        - Popular events: Basketball games, Greek life mixers, RSO fairs, tailgates
-        - Student life: Greek life, RSOs, study spots, late-night food options
-        - School spirit: LMU Lions, crimson and navy colors, campus traditions
-        
-        Respond as a friendly, knowledgeable LMU student who loves helping others navigate campus life!"""
+        # GenZ Buddy system prompt - Authentic LMU student voice
+        self.system_prompt = """You are LMU Buddy, a 2025 LMU student who's been here for a minute and knows the campus like the back of your hand.
+
+CORE PERSONALITY:
+- You're a real LMU student, not an AI. Act like you actually go here.
+- Use GenZ slang naturally: "fr", "bet", "lowkey", "nah for real", "vibes", "idk tbh", "lemme check"
+- Match the user's energy - if they're casual, be casual. If they're formal, be slightly formal but still chill.
+- Keep it real and concise. No fluff, no over-explaining.
+- Be honest when you don't know something: "that's above my pay grade 😭" or "idk tbh, lemme ask around"
+
+LMU SPECIFIC KNOWLEDGE:
+- Campus spots: The Bluff, U-Hall, Burns Backcourt, The Lair, C-Store, Sunken Garden, Gersten
+- Student life: Lion Dollars, First Fridays, late-night C-Store runs, Greek row, RSOs
+- Events: Basketball games at Gersten, tailgates, mixers, study sessions
+- Food: The Lair pizza hits different at 2am, Den chicken tenders, C-Store snacks
+- Culture: LMU Lions pride, crimson & navy everything, campus traditions
+
+COMMUNICATION STYLE:
+- Use emojis sparingly but effectively: 👀 for interest, 😭 for relatable struggles, 💀 for humor
+- Drop unnecessary words. "Check the website" → "check LMU's site"
+- Include LMU-specific references that make you sound like you actually go here
+- React naturally: "free food? 👀", "yup, mad crowded tho 😭"
+- Use contractions and casual language: "you're", "that's", "lemme", "gonna"
+
+EXAMPLES OF GOOD RESPONSES:
+- "The Lair pizza hits different at 2am fr 🍕"
+- "Greek life mixer this Friday at the Sunken Garden, should be lit 🔥"
+- "idk tbh, lemme check the ASLMU Insta - they post everything there"
+- "U-Hall is lowkey the best study spot, especially the 3rd floor"
+- "Basketball game tonight at Gersten! Wear your LMU gear 🦁"
+
+Remember: You're a real student helping other students. Keep it authentic, keep it LMU, keep it GenZ."""
     
     def generate_response(self, user_message: str, conversation_history: list = None) -> Dict[str, Any]:
         """
@@ -155,38 +168,46 @@ class LlamaIntegration:
         Returns:
             Fallback response dictionary
         """
-        # Smart fallback responses based on common questions
+        # Smart fallback responses with authentic GenZ LMU voice
         fallback_responses = {
-            "food": "Omg the Lair is literally the GOAT for late night munchies! 🍕 Their pizza hits different at 2am, and the fries are *chef's kiss*. Also, the Den has some fire chicken tenders if you're feeling that vibe. Pro tip: bring your student ID for the discount! 💅✨",
+            "food": "The Lair pizza hits different at 2am fr 🍕 fries are *chef's kiss* too. Den has fire chicken tenders if you're feeling that vibe. Pro tip: bring your student ID for the discount!",
             
-            "greek": "Yasss Greek life is where it's at! 🏛️ First, go to the Greek Life mixer this Friday (I'll send you the deets). Then check out rush week in the spring - it's like a whole vibe! Each house has their own personality, so go to as many events as you can. My friend Sarah just joined Alpha Phi and she's living her best life! DM me if you want the tea on specific houses 👀",
+            "greek": "Greek life mixer this Friday at the Sunken Garden, should be lit 🔥 rush week in the spring is a whole vibe. each house has their own personality fr. my friend Sarah just joined Alpha Phi and she's living her best life. dm me if you want the tea on specific houses 👀",
             
-            "weekend": "This weekend is gonna be LIT! 🔥 Friday we have the basketball game vs USC (wear your LMU gear!), Saturday is the Greek mixer in the Sunken Garden, and Sunday there's a study session at the library for finals prep. Plus, there's a campus spirit challenge going on - you can earn points and prizes! Are you going to any of these? I can give you the full tea ☕",
+            "weekend": "This weekend gonna be LIT! 🔥 Friday basketball game vs USC (wear your LMU gear!), Saturday Greek mixer at the Sunken Garden, Sunday study session at the library for finals prep. plus there's a campus spirit challenge going on - you can earn points and prizes! you going to any of these?",
             
-            "study": "The library is obviously the classic choice, but here's the real tea: 🫖 The 3rd floor of the library has the best views and is usually quieter. The Den has great vibes if you want background noise, and the new student center has these amazing pods that are perfect for group study sessions. My secret spot? The rooftop of the business building - it's so aesthetic and peaceful! 📚✨",
+            "study": "U-Hall 3rd floor has the best views and is usually quieter. Den has great vibes if you want background noise, new student center has these amazing pods perfect for group study sessions. my secret spot? rooftop of the business building - so aesthetic and peaceful! 📚",
             
-            "event": "Check out the Events tab in the app! There's always something going on - from basketball games to Greek mixers to study sessions. Plus, you can earn points for attending events and climb the leaderboard! What kind of vibe are you looking for? 🎉",
+            "event": "Check the Events tab in the app! always something going on - basketball games, Greek mixers, study sessions. plus you can earn points for attending events and climb the leaderboard! what kind of vibe you looking for? 🎉",
             
-            "points": "You can earn points by attending events, completing daily challenges, checking in at game days, and participating in campus activities! The more you engage, the more points you get. Use them to claim prizes like LMU merch and game tickets! 🏆",
+            "points": "You can earn points by attending events, completing daily challenges, checking in at game days, and participating in campus activities! more you engage, more points you get. use them to claim prizes like LMU merch and game tickets! 🏆",
             
-            "default": "That's a great question! 🤔 Let me think... Honestly, I'm still learning about everything on campus, but I'd recommend checking out the student activities page or asking around! The LMU community is super helpful. What else can I help you with? 💫"
+            "basketball": "Basketball games at Gersten are LIT! 🦁🔥 wear your LMU gear, the energy is unmatched. student section goes crazy fr. check the schedule on the athletics site or ASLMU Insta",
+            
+            "library": "William H. Hannon Library is the classic choice, but here's the real tea: 🫖 3rd floor has the best views and is usually quieter. Den has great vibes if you want background noise, and the new student center has these amazing pods that are perfect for group study sessions. my secret spot? rooftop of the business building - so aesthetic and peaceful! 📚",
+            
+            "default": "That's a great question! 🤔 honestly, I'm still learning about everything on campus, but I'd recommend checking the student activities page or asking around! LMU community is super helpful fr. what else can I help you with? 💫"
         }
         
-        # Determine which fallback to use
+        # Determine which fallback to use based on keywords
         message_lower = user_message.lower()
         
-        if any(word in message_lower for word in ['food', 'eat', 'hungry', 'lair', 'den', 'pizza']):
+        if any(word in message_lower for word in ['food', 'eat', 'hungry', 'lair', 'den', 'pizza', 'cstore', 'c-store']):
             response = fallback_responses["food"]
         elif any(word in message_lower for word in ['greek', 'sorority', 'fraternity', 'rush', 'mixer']):
             response = fallback_responses["greek"]
         elif any(word in message_lower for word in ['weekend', 'friday', 'saturday', 'sunday', 'tonight']):
             response = fallback_responses["weekend"]
-        elif any(word in message_lower for word in ['study', 'library', 'quiet', 'homework', 'exam']):
+        elif any(word in message_lower for word in ['study', 'library', 'quiet', 'homework', 'exam', 'uhall', 'u-hall']):
             response = fallback_responses["study"]
-        elif any(word in message_lower for word in ['event', 'party', 'game', 'basketball']):
+        elif any(word in message_lower for word in ['event', 'party', 'game', 'basketball', 'gersten']):
             response = fallback_responses["event"]
         elif any(word in message_lower for word in ['point', 'score', 'rank', 'leaderboard']):
             response = fallback_responses["points"]
+        elif any(word in message_lower for word in ['basketball', 'gersten', 'game']):
+            response = fallback_responses["basketball"]
+        elif any(word in message_lower for word in ['library', 'hannon', 'study']):
+            response = fallback_responses["library"]
         else:
             response = fallback_responses["default"]
         
