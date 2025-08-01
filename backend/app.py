@@ -3,6 +3,7 @@ from flask_cors import CORS
 from datetime import datetime
 import os
 import logging
+import re
 
 # Import the Llama integration
 try:
@@ -317,10 +318,14 @@ def join_waitlist():
         data = request.get_json()
         
         # Validate required fields
-        required_fields = ['email', 'name']
+        required_fields = ['email', 'name', 'student_id']
         for field in required_fields:
             if not data.get(field):
                 return jsonify({"error": f"Missing required field: {field}"}), 400
+        
+        # Validate student ID format (8 digits)
+        if not re.match(r'^\d{8}$', data.get('student_id', '')):
+            return jsonify({"error": "Student ID must be 8 digits"}), 400
         
         # Check if already on waitlist
         if DATABASE_AVAILABLE:
@@ -332,8 +337,10 @@ def join_waitlist():
         waitlist_data = {
             'email': data['email'],
             'name': data['name'],
+            'student_id': data['student_id'],
             'phone': data.get('phone', ''),
             'graduation_year': data.get('graduation_year'),
+            'major': data.get('major', ''),
             'interests': data.get('interests', []),
             'referral_source': data.get('referral_source', 'website'),
             'status': 'pending'

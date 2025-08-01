@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { FaEnvelope, FaUser, FaPhone, FaGraduationCap, FaHeart, FaArrowRight } from 'react-icons/fa';
+import { FaEnvelope, FaUser, FaPhone, FaGraduationCap, FaHeart, FaArrowRight, FaIdCard, FaBook } from 'react-icons/fa';
 import toast from 'react-hot-toast';
 import axios from 'axios';
 
@@ -8,8 +8,10 @@ const WaitlistSignup = ({ onClose, isVisible }) => {
   const [formData, setFormData] = useState({
     name: '',
     email: '',
+    student_id: '',
     phone: '',
     graduation_year: '',
+    major: '',
     interests: [],
     referral_source: 'website'
   });
@@ -37,6 +39,37 @@ const WaitlistSignup = ({ onClose, isVisible }) => {
     { value: '2030', label: '2030' }
   ];
 
+  const majorOptions = [
+    { value: '', label: 'Select Major' },
+    { value: 'Computer Science', label: 'Computer Science' },
+    { value: 'Business Administration', label: 'Business Administration' },
+    { value: 'Psychology', label: 'Psychology' },
+    { value: 'Communication Studies', label: 'Communication Studies' },
+    { value: 'Film and Television Production', label: 'Film and Television Production' },
+    { value: 'Engineering', label: 'Engineering' },
+    { value: 'Biology', label: 'Biology' },
+    { value: 'English', label: 'English' },
+    { value: 'Political Science', label: 'Political Science' },
+    { value: 'Economics', label: 'Economics' },
+    { value: 'Mathematics', label: 'Mathematics' },
+    { value: 'Philosophy', label: 'Philosophy' },
+    { value: 'Theology', label: 'Theology' },
+    { value: 'Art History', label: 'Art History' },
+    { value: 'Studio Arts', label: 'Studio Arts' },
+    { value: 'Music', label: 'Music' },
+    { value: 'Theatre Arts', label: 'Theatre Arts' },
+    { value: 'Journalism', label: 'Journalism' },
+    { value: 'Public Relations', label: 'Public Relations' },
+    { value: 'Marketing', label: 'Marketing' },
+    { value: 'Finance', label: 'Finance' },
+    { value: 'Accounting', label: 'Accounting' },
+    { value: 'International Relations', label: 'International Relations' },
+    { value: 'Environmental Science', label: 'Environmental Science' },
+    { value: 'Chemistry', label: 'Chemistry' },
+    { value: 'Physics', label: 'Physics' },
+    { value: 'Other', label: 'Other' }
+  ];
+
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({
@@ -57,8 +90,14 @@ const WaitlistSignup = ({ onClose, isVisible }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    if (!formData.name || !formData.email) {
-      toast.error('Please fill in your name and email');
+    if (!formData.name || !formData.email || !formData.student_id) {
+      toast.error('Please fill in your name, email, and student ID');
+      return;
+    }
+
+    // Validate student ID format (8 digits)
+    if (!/^\d{8}$/.test(formData.student_id)) {
+      toast.error('Please enter a valid 8-digit student ID');
       return;
     }
 
@@ -177,6 +216,25 @@ const WaitlistSignup = ({ onClose, isVisible }) => {
                 />
               </div>
 
+              {/* Student ID */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <FaIdCard className="inline mr-2" />
+                  Student ID Number *
+                </label>
+                <input
+                  type="text"
+                  name="student_id"
+                  value={formData.student_id}
+                  onChange={handleInputChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="12345678"
+                  required
+                  maxLength="8"
+                />
+                <p className="text-xs text-gray-500 mt-1">8-digit LMU student ID</p>
+              </div>
+
               {/* Phone */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -208,6 +266,26 @@ const WaitlistSignup = ({ onClose, isVisible }) => {
                   {graduationYears.map(year => (
                     <option key={year.value} value={year.value}>
                       {year.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Major */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <FaBook className="inline mr-2" />
+                  Major
+                </label>
+                <select
+                  name="major"
+                  value={formData.major}
+                  onChange={handleInputChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                >
+                  {majorOptions.map(major => (
+                    <option key={major.value} value={major.value}>
+                      {major.label}
                     </option>
                   ))}
                 </select>
