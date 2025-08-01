@@ -25,37 +25,18 @@ class LlamaIntegration:
         self.timeout = int(os.getenv('LLAMA_TIMEOUT', '30'))
         
         # GenZ Buddy system prompt - Authentic LMU student voice
-        self.system_prompt = """You are LMU Buddy, a 2025 LMU student who's been here for a minute and knows the campus like the back of your hand.
+        self.system_prompt = """You are LMU Buddy, a 2025 LMU student. Use GenZ slang naturally: "fr", "bet", "lowkey", "vibes", "idk tbh". Be casual and concise. Match user's energy.
 
-CORE PERSONALITY:
-- You're a real LMU student, not an AI. Act like you actually go here.
-- Use GenZ slang naturally: "fr", "bet", "lowkey", "nah for real", "vibes", "idk tbh", "lemme check"
-- Match the user's energy - if they're casual, be casual. If they're formal, be slightly formal but still chill.
-- Keep it real and concise. No fluff, no over-explaining.
-- Be honest when you don't know something: "that's above my pay grade 😭" or "idk tbh, lemme ask around"
+LMU knowledge: The Bluff, U-Hall, Burns Backcourt, The Lair, C-Store, Sunken Garden, Gersten, Lion Dollars, First Fridays, Greek row, basketball games.
 
-LMU SPECIFIC KNOWLEDGE:
-- Campus spots: The Bluff, U-Hall, Burns Backcourt, The Lair, C-Store, Sunken Garden, Gersten
-- Student life: Lion Dollars, First Fridays, late-night C-Store runs, Greek row, RSOs
-- Events: Basketball games at Gersten, tailgates, mixers, study sessions
-- Food: The Lair pizza hits different at 2am, Den chicken tenders, C-Store snacks
-- Culture: LMU Lions pride, crimson & navy everything, campus traditions
+Use emojis sparingly: 👀 😭 💀. Be honest when you don't know something: "that's above my pay grade 😭".
 
-COMMUNICATION STYLE:
-- Use emojis sparingly but effectively: 👀 for interest, 😭 for relatable struggles, 💀 for humor
-- Drop unnecessary words. "Check the website" → "check LMU's site"
-- Include LMU-specific references that make you sound like you actually go here
-- React naturally: "free food? 👀", "yup, mad crowded tho 😭"
-- Use contractions and casual language: "you're", "that's", "lemme", "gonna"
-
-EXAMPLES OF GOOD RESPONSES:
+Examples:
 - "The Lair pizza hits different at 2am fr 🍕"
-- "Greek life mixer this Friday at the Sunken Garden, should be lit 🔥"
-- "idk tbh, lemme check the ASLMU Insta - they post everything there"
-- "U-Hall is lowkey the best study spot, especially the 3rd floor"
-- "Basketball game tonight at Gersten! Wear your LMU gear 🦁"
+- "Greek life mixer this Friday, should be lit 🔥"
+- "idk tbh, lemme check the ASLMU Insta"
 
-Remember: You're a real student helping other students. Keep it authentic, keep it LMU, keep it GenZ."""
+You're a real student helping other students. Keep it authentic and LMU-specific."""
     
     def generate_response(self, user_message: str, conversation_history: list = None) -> Dict[str, Any]:
         """
@@ -130,6 +111,63 @@ Remember: You're a real student helping other students. Keep it authentic, keep 
         Returns:
             Generated response text
         """
+        # Check if we're using Ollama (port 11434)
+        if "11434" in self.model_endpoint:
+            return self._call_ollama_model(messages)
+        else:
+            return self._call_standard_model(messages)
+    
+    def _call_ollama_model(self, messages: list) -> str:
+        """
+        Make API call to Ollama model
+        
+        Args:
+            messages: Formatted messages for the model
+            
+        Returns:
+            Generated response text
+        """
+        # Convert chat format to Ollama format
+        prompt = self._convert_messages_to_prompt(messages)
+        
+        payload = {
+            "model": "llama2:7b",
+            "prompt": prompt,
+            "stream": False,
+            "options": {
+                "temperature": 0.8,
+                "top_p": 0.9,
+                "num_predict": 300
+            }
+        }
+        
+        headers = {
+            "Content-Type": "application/json"
+        }
+        
+        response = requests.post(
+            self.model_endpoint,
+            json=payload,
+            headers=headers,
+            timeout=self.timeout
+        )
+        
+        if response.status_code == 200:
+            result = response.json()
+            return result.get('response', '')
+        else:
+            raise Exception(f"Ollama API error: {response.status_code} - {response.text}")
+    
+    def _call_standard_model(self, messages: list) -> str:
+        """
+        Make API call to standard chat completions model
+        
+        Args:
+            messages: Formatted messages for the model
+            
+        Returns:
+            Generated response text
+        """
         payload = {
             "messages": messages,
             "max_tokens": 300,
@@ -157,6 +195,34 @@ Remember: You're a real student helping other students. Keep it authentic, keep 
             return result.get('choices', [{}])[0].get('message', {}).get('content', '')
         else:
             raise Exception(f"Model API error: {response.status_code} - {response.text}")
+    
+    def _convert_messages_to_prompt(self, messages: list) -> str:
+        """
+        Convert chat messages to Ollama prompt format
+        
+        Args:
+            messages: List of chat messages
+            
+        Returns:
+            Formatted prompt string
+        """
+        prompt_parts = []
+        
+        for message in messages:
+            role = message.get('role', '')
+            content = message.get('content', '')
+            
+            if role == 'system':
+                prompt_parts.append(f"System: {content}")
+            elif role == 'user':
+                prompt_parts.append(f"User: {content}")
+            elif role == 'assistant':
+                prompt_parts.append(f"Assistant: {content}")
+        
+        # Add the final instruction
+        prompt_parts.append("Assistant:")
+        
+        return "\n".join(prompt_parts)
     
     def _get_fallback_response(self, user_message: str) -> Dict[str, Any]:
         """
