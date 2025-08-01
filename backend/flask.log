@@ -1,3 +1,4 @@
+WARNING:root:Database integration not available - using mock data: No module named 'supabase'
  * Serving Flask app 'app'
  * Debug mode: off
 INFO:werkzeug:[31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
@@ -5,14 +6,4 @@ INFO:werkzeug:[31m[1mWARNING: This is a development server. Do not use it in a
  * Running on http://127.0.0.1:8000
  * Running on http://172.30.0.2:8000
 INFO:werkzeug:[33mPress CTRL+C to quit[0m
-INFO:werkzeug:127.0.0.1 - - [01/Aug/2025 17:33:22] "GET / HTTP/1.1" 200 -
-INFO:werkzeug:127.0.0.1 - - [01/Aug/2025 17:33:23] "GET /api/events HTTP/1.1" 200 -
-INFO:__main__:Generating Llama response for: What is the best food on campus?...
-INFO:werkzeug:127.0.0.1 - - [01/Aug/2025 17:35:13] "[33mPOST /generate HTTP/1.1[0m" 404 -
-ERROR:llama_integration:Error generating Llama response: Model API error: 404 - <!doctype html>
-<html lang=en>
-<title>404 Not Found</title>
-<h1>Not Found</h1>
-<p>The requested URL was not found on the server. If you entered the URL manually please check your spelling and try again.</p>
-
-INFO:werkzeug:127.0.0.1 - - [01/Aug/2025 17:35:13] "POST /api/genz-buddy HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [01/Aug/2025 17:57:25] "POST /api/waitlist HTTP/1.1" 200 -
